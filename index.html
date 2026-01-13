@@ -1,0 +1,108 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InsightStream AI Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.css"/>
+    <style>
+        @media print {
+            /* Gereksiz UI öğelerini gizle */
+            .no-print { display: none !important; }
+            header, nav, aside, button { display: none !important; }
+            
+            /* Sayfa yapısını baskı için normalize et */
+            body, html { 
+                background: white !important; 
+                color: black !important;
+                height: auto !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            #root { 
+                height: auto !important; 
+                overflow: visible !important; 
+            }
+
+            /* Dashboard ve Modal layout sorunlarını düzelt */
+            .min-h-screen { min-height: 0 !important; }
+            .sticky, .fixed { position: relative !important; top: 0 !important; }
+            .overflow-y-auto { overflow: visible !important; height: auto !important; }
+            
+            /* Grafiklerin sayfa ortasında bölünmesini engelle */
+            .chart-container, .bg-white { 
+                page-break-inside: avoid; 
+                break-inside: avoid;
+                margin-bottom: 2rem;
+                box-shadow: none !important;
+                border: 1px solid #eee !important;
+            }
+
+            /* Responsive grid'i baskı için dikey yap */
+            .grid { display: block !important; }
+            .grid > div { width: 100% !important; margin-bottom: 20px !important; }
+
+            /* Sadece belirli alanları yazdırmak için yardımcı sınıflar */
+            .print-only { display: block !important; }
+            
+            /* Animasyonları durdur */
+            * { 
+                animation: none !important; 
+                transition: none !important; 
+            }
+        }
+        
+        .print-only { display: none; }
+        
+        /* Tur baloncuğu özelleştirme */
+        .driver-popover {
+          border-radius: 2rem !important;
+          padding: 2rem !important;
+          border: none !important;
+          box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
+        }
+        .driver-popover-title {
+          font-weight: 900 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.05em !important;
+          color: #1e293b !important;
+        }
+        .driver-popover-description {
+          font-size: 14px !important;
+          color: #64748b !important;
+        }
+        .driver-popover-next-btn {
+          background-color: #4f46e5 !important;
+          text-shadow: none !important;
+          border: none !important;
+          border-radius: 0.75rem !important;
+          padding: 8px 16px !important;
+          font-weight: bold !important;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
+    "driver.js": "https://esm.sh/driver.js@^1.0.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans">
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

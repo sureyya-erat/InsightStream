@@ -1,0 +1,55 @@
+.report-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "summary"
+    "region"
+    "records"
+    "category";
+  gap: 10px;
+  align-items: stretch;
+}
+
+.report-grid .summary-card {
+  grid-area: summary;
+  min-height: 100%;
+}
+
+.report-grid .region-card {
+  grid-area: region;
+}
+
+.report-grid .records-card {
+  grid-area: records;
+}
+
+.report-grid .category-card {
+  grid-area: category;
+}
+
+.report-grid .insight-card {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 640px) {
+  .report-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "summary summary"
+      "region region"
+      "records category";
+    gap: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .report-grid {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    grid-template-areas:
+      "summary region"
+      "records category";
+    gap: 16px;
+  }
+}
