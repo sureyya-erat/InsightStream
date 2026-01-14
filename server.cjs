@@ -872,6 +872,8 @@ app.post('/api/email/send', async (req, res) => {
     return res.status(400).json({ ok: false, errorMessage: 'Geçerli bir alıcı adresi bulunamadı.' });
   }
 
+  let resendError = null;
+
   if (resend && process.env.RESEND_FROM) {
     try {
       const resendPayload = {
@@ -892,6 +894,7 @@ app.post('/api/email/send', async (req, res) => {
       return res.json({ ok: true, provider: 'resend', id: data.id });
     } catch (error) {
       console.error('Resend Gönderim Hatası:', error);
+      resendError = error;
       if (!process.env.SMTP_HOST) {
         return res.status(500).json({
           ok: false,
@@ -918,11 +921,17 @@ app.post('/api/email/send', async (req, res) => {
       });
       return res.json({ ok: true, provider: 'smtp', messageId: info.messageId });
     } catch (error) {
+      const combinedError = resendError
+        ? `Resend: ${resendError.message} | SMTP: ${error.message}`
+        : error.message;
+
       return res.status(500).json({
         ok: false,
         provider: 'smtp',
-        errorMessage: error.message,
-        hintTR: 'SMTP sunucusu üzerinden gönderim başarısız oldu.',
+        errorMessage: combinedError,
+        hintTR: resendError
+          ? 'Her iki e-posta servisi de hata verdi. Lütfen RESEND_FROM veya SMTP ayarlarını kontrol edin.'
+          : 'SMTP sunucusu üzerinden gönderim başarısız oldu.',
       });
     }
   }
