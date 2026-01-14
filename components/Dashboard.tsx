@@ -28,6 +28,10 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
   // Email Modal States
   const [emailTo, setEmailTo] = useState('');
   const [emailSubject, setEmailSubject] = useState('InsightStream Raporu - ' + dataset.name);
+
+  useEffect(() => {
+    setEmailSubject('InsightStream Raporu - ' + dataset.name);
+  }, [dataset.name]);
   const [emailMessage, setEmailMessage] = useState('');
   const [includePdf, setIncludePdf] = useState(true);
   const [emailLoading, setEmailLoading] = useState(false);
@@ -160,7 +164,7 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
     }
 
     const htmlBody = `
-  < div style = "font-family: sans-serif; color: #1e293b; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 20px;" >
+      <div style="font-family: sans-serif; color: #1e293b; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 20px;">
         <h2 style="color: #4f46e5; margin-bottom: 20px;">InsightStream BI Raporu</h2>
         <p style="white-space: pre-line; font-size: 14px; line-height: 1.6;">${emailMessage}</p>
         
@@ -181,7 +185,7 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
         <p style="font-size: 11px; color: #cbd5e1; text-align: center; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 15px;">
           Bu rapor InsightStream AI tarafından otomatik üretilmiştir.
         </p>
-      </div >
+      </div>
   `;
 
     const res = await EmailService.sendWithAttachment({

@@ -30,6 +30,7 @@ export interface SchemaMapping {
   city: string | null;
   branch: string | null;
   category: string | null;
+  product: string | null;
   price: string | null;
   qty: string | null;
   margin: string | null;

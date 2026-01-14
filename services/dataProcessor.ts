@@ -42,20 +42,22 @@ export class DataProcessor {
     const map: SchemaMapping = {
       txId: null, date: null, year: null, month: null, weekday: null,
       city: null, branch: null, category: null, price: null, qty: null,
-      margin: null, revenue: null, profit: null, cost: null, discount: null
+      margin: null, revenue: null, profit: null, cost: null, discount: null, product: null
     };
 
-    const find = (keywords: string[], type?: ColumnType) => {
+    const find = (keywords: string[], type?: ColumnType, excludePattern?: RegExp) => {
       // Prioritize exact matches first, then partial matches
       const exact = profiles.find(p =>
         keywords.some(k => p.name.toLowerCase() === k.toLowerCase()) &&
-        (!type || p.type === type)
+        (!type || p.type === type) &&
+        (!excludePattern || !excludePattern.test(p.name))
       );
       if (exact) return exact.name;
 
       return profiles.find(p =>
         keywords.some(k => p.name.toLowerCase().includes(k.toLowerCase())) &&
-        (!type || p.type === type)
+        (!type || p.type === type) &&
+        (!excludePattern || !excludePattern.test(p.name))
       )?.name || null;
     };
 
@@ -70,6 +72,8 @@ export class DataProcessor {
     map.city = find(['city', 'şehir', 'sehir', 'il', 'region', 'bölge', 'bolge', 'location', 'lokasyon', 'kent', 'province']);
     map.branch = find(['branch', 'şube', 'sube', 'mağaza', 'magaza', 'store', 'district', 'bayi', 'ofis', 'nokta']);
     map.category = find(['category', 'kategori', 'tip', 'type', 'segment', 'grup', 'group', 'class', 'sınıf', 'tür', 'tur', 'family', 'aile']);
+    // Exclude columns containing "id" (case insensitive) for product names to avoid codes like "PROD_ID"
+    map.product = find(['product', 'ürün', 'urun', 'malzeme', 'item', 'name', 'ad', 'description', 'tanım', 'cinsi', 'type', 'tip'], undefined, /id/i);
 
     // Financials
     map.price = find(['price', 'fiyat', 'birim', 'rate', 'unitprice', 'satış fiyatı', 'satis fiyati', 'birim fiyat'], 'numeric');

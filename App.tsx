@@ -97,8 +97,8 @@ const App: React.FC = () => {
         popover: {
           title: 'InsightStream BI',
           description: 'Bu uygulama ile verilerinizi yükleyebilir, interaktif dashboardlar oluşturabilir ve AI destekli analizler yapabilirsiniz.',
-          side: "right",
-          align: 'start'
+          side: "right" as any,
+          align: 'start' as any
         }
       },
       {
@@ -106,8 +106,8 @@ const App: React.FC = () => {
         popover: {
           title: 'Veri Yükleme',
           description: 'Başlamak için kendi verinizi yükleyin veya örnek veri setini kullanın. (Sizin için şimdi örnek veriyi yüklüyoruz!)',
-          side: "bottom",
-          align: 'start',
+          side: "bottom" as any,
+          align: 'start' as any,
           onNextClick: () => {
             if (!activeDataset) {
               loadDemo();
@@ -123,23 +123,23 @@ const App: React.FC = () => {
       },
       {
         element: '[data-tour="filters"]',
-        popover: { title: 'Dinamik Filtreler', description: 'Yıl, Ay, Şube ve Kategori bazlı anlık filtreleme yapın. Tüm grafikler anında güncellenir.', side: "right", align: 'start' }
+        popover: { title: 'Dinamik Filtreler', description: 'Yıl, Ay, Şube ve Kategori bazlı anlık filtreleme yapın. Tüm grafikler anında güncellenir.', side: "right" as any, align: 'start' as any }
       },
       {
         element: '[data-tour="kpis"]',
-        popover: { title: 'Canlı Metrikler', description: 'Ciro, Kâr ve Satış miktarlarınızı gerçek zamanlı takip edin.', side: "bottom", align: 'start' }
+        popover: { title: 'Canlı Metrikler', description: 'Ciro, Kâr ve Satış miktarlarınızı gerçek zamanlı takip edin.', side: "bottom" as any, align: 'start' as any }
       },
       {
         element: '[data-tour="charts"]',
-        popover: { title: 'Gelişmiş Grafikler', description: 'Trendler, Pareto ve Fiyat analizlerini buradan inceleyin.', side: "top", align: 'start' }
+        popover: { title: 'Gelişmiş Grafikler', description: 'Trendler, Pareto ve Fiyat analizlerini buradan inceleyin.', side: "top" as any, align: 'start' as any }
       },
       {
         element: '[data-tour="nav-chat"]',
         popover: {
           title: 'Veri ile Sohbet',
           description: 'Yapay zekaya doğal dilde sorular sorarak analiz isteyin. Örn: "En kârlı şube hangisi?"',
-          side: "bottom",
-          align: 'start',
+          side: "bottom" as any,
+          align: 'start' as any,
           onNextClick: () => {
             setCurrentPage(Page.Chat);
             setTimeout(() => {
@@ -153,8 +153,8 @@ const App: React.FC = () => {
         popover: {
           title: 'What-if Simülasyon',
           description: 'Fiyat ve marj değişimlerinin kâr üzerindeki etkilerini simüle edin.',
-          side: "bottom",
-          align: 'start',
+          side: "bottom" as any,
+          align: 'start' as any,
           onNextClick: () => {
             setCurrentPage(Page.Simulation);
             setTimeout(() => {
@@ -168,8 +168,8 @@ const App: React.FC = () => {
         popover: {
           title: 'Otomatik Raporlama',
           description: 'Dashboard görünümlerinizi PDF olarak zamanlayıp otomatik e-posta gönderin.',
-          side: "bottom",
-          align: 'start',
+          side: "bottom" as any,
+          align: 'start' as any,
           onNextClick: () => {
             setCurrentPage(Page.Scheduling);
             setTimeout(() => {
@@ -339,7 +339,7 @@ const App: React.FC = () => {
     if (!activeDataset) return null;
     switch (currentPage) {
       case Page.Dashboard:
-        return <Dashboard dataset={activeDataset} onBack={goToHome} onStartTour={handleStartTour} />;
+        return <Dashboard key={activeDataset.name} dataset={activeDataset} onBack={goToHome} onStartTour={handleStartTour} />;
       case Page.DataQuality:
         return <DataQualityPage dataset={activeDataset} />;
       case Page.Simulation:

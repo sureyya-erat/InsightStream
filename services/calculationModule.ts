@@ -116,7 +116,9 @@ export class CalculationModule {
     d['UNIT_PRICE_final'] = price || (qty ? revenue / qty : 0);
     d['MARGIN_RATE_final'] = marginRate || 0;
 
-    d['PRODUCT_ID_final'] = String(row['PRODUCT ID'] || row['Product'] || row['UrunID'] || 'UNK_PROD');
+    // Priority: Mapped product column -> Explicit 'Product Name' columns -> Fallback to UNK_PROD
+    // We avoid 'ID' columns here if possible, as 'map.product' logic in dataProcessor is now stricter.
+    d['PRODUCT_ID_final'] = String(row[map.product || ''] || row['Product Name'] || row['Urun Adi'] || row['Item Name'] || row['Product'] || 'UNK_PROD');
     d['TX_ID_final'] = String(row[map.txId || ''] || 'TX_' + Math.random());
 
     let jsDate: Date | null = null;
