@@ -341,7 +341,7 @@ const App: React.FC = () => {
       case Page.Dashboard:
         return <Dashboard key={activeDataset.name} dataset={activeDataset} onBack={goToHome} onStartTour={handleStartTour} />;
       case Page.DataQuality:
-        return <DataQualityPage dataset={activeDataset} />;
+        return <DataQualityPage dataset={activeDataset} onUpdateDataset={setActiveDataset} />;
       case Page.Simulation:
         return <SimulationPage dataset={activeDataset} filterState={filterStateSnapshot || { years: "ALL", months: "ALL", cities: "ALL", branches: "ALL", categories: "ALL", genericFilters: {} }} />;
       case Page.Chat:

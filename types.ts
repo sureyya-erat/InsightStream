@@ -11,6 +11,7 @@ export interface ColumnProfile {
   missingRate: number;
   uniqueCount: number;
   sampleValues: any[];
+  topValues?: any[];
 }
 
 export interface CalculatedField {

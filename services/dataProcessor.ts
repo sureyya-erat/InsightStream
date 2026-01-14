@@ -33,7 +33,8 @@ export class DataProcessor {
         type: this.detectType(values),
         missingRate: missing / rows.length,
         uniqueCount: unique.size,
-        sampleValues: values.slice(0, 3)
+        sampleValues: values.slice(0, 3),
+        topValues: Array.from(unique).slice(0, 5) // Simplified top values
       };
     });
   }
@@ -137,5 +138,50 @@ export class DataProcessor {
         reader.readAsText(file);
       } else reject(new Error('Desteklenmeyen dosya formatı.'));
     });
+  }
+  static cleanDataset(dataset: Dataset, options: { fillMissing?: boolean, removeDuplicates?: boolean }): Dataset {
+    let rows = [...dataset.rows];
+    let profiles = [...dataset.profiles];
+
+    // 1. Fill Missing Values
+    if (options.fillMissing) {
+      // Calculate defaults for each column
+      const defaults: Record<string, any> = {};
+      profiles.forEach(p => {
+        if (p.type === 'numeric') {
+          // Mean for numeric
+          const valid = rows.map(r => r[p.name]).filter(v => typeof v === 'number');
+          const sum = valid.reduce((a, b) => a + b, 0);
+          defaults[p.name] = valid.length ? sum / valid.length : 0;
+        } else {
+          // Mode (most common) for categorical, or 'Bilinmeyen' if undefined
+          defaults[p.name] = p.topValues?.[0] || 'Bilinmeyen';
+        }
+      });
+
+      rows = rows.map(row => {
+        const newRow = { ...row };
+        Object.keys(newRow).forEach(key => {
+          if (newRow[key] === null || newRow[key] === undefined || newRow[key] === '') {
+            newRow[key] = defaults[key];
+          }
+        });
+        return newRow;
+      });
+    }
+
+    // 2. Remove Duplicates
+    if (options.removeDuplicates && dataset.mapping.txId) {
+      const seen = new Set<string>();
+      rows = rows.filter(row => {
+        const id = String(row[dataset.mapping.txId!]);
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+    }
+
+    // Re-process dataset to update profiles/stats
+    return this.processDataset(dataset.name, rows);
   }
 }

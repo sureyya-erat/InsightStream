@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Dataset } from '../types';
 import { CalculationModule } from '../services/calculationModule';
+import { DataProcessor } from '../services/dataProcessor';
 import {
   Droplet,
   Copy,
@@ -28,6 +29,7 @@ interface ColumnQuality {
 
 interface Props {
   dataset: Dataset;
+  onUpdateDataset: (dataset: Dataset) => void;
 }
 
 const formatPercent = (value: number) => `${value.toFixed(1)}%`;
@@ -38,7 +40,7 @@ const formatValue = (val: any) => {
   return String(val);
 };
 
-export const DataQualityPage: React.FC<Props> = ({ dataset }) => {
+export const DataQualityPage: React.FC<Props> = ({ dataset, onUpdateDataset }) => {
   const processedRows = useMemo(
     () => dataset.rows.map(row => CalculationModule.processRow(row, dataset.mapping)),
     [dataset]
@@ -157,6 +159,20 @@ export const DataQualityPage: React.FC<Props> = ({ dataset }) => {
     return items;
   }, [missingPct, missingCells, duplicateStats, numericOutliers, totalRows]);
 
+  const handleAutoClean = () => {
+    if (window.confirm('Veri seti otomatik olarak temizlenecek (Eksik veriler doldurulacak, yinelenenler kaldırılacak). Devam edilsin mi?')) {
+      const cleaned = DataProcessor.cleanDataset(dataset, { fillMissing: true, removeDuplicates: true });
+      onUpdateDataset(cleaned);
+    }
+  };
+
+  const handleFillMissing = () => {
+    if (window.confirm('Tüm boş hücreler otomatik varsayılan değerlerle doldurulacak. Devam edilsin mi?')) {
+      const cleaned = DataProcessor.cleanDataset(dataset, { fillMissing: true });
+      onUpdateDataset(cleaned);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-8 space-y-8">
       <header className="space-y-4">
@@ -170,8 +186,16 @@ export const DataQualityPage: React.FC<Props> = ({ dataset }) => {
               <p className="text-slate-500 font-medium">Veri setinizdeki eksiklikler, tutarsızlıklar ve aykırı değerleri anlık takip edin.</p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="px-4 py-2 rounded-2xl border border-slate-200 text-xs font-black uppercase tracking-[0.3em] bg-white text-slate-500">Otomatik</button>
-              <button className="px-4 py-2 rounded-2xl border border-transparent text-xs font-black uppercase tracking-[0.3em] bg-slate-900 text-white flex items-center gap-2">
+              <button
+                onClick={handleAutoClean}
+                className="px-4 py-2 rounded-2xl border border-slate-200 text-xs font-black uppercase tracking-[0.3em] bg-white text-slate-500 hover:bg-slate-50 transition-colors"
+              >
+                Otomatik
+              </button>
+              <button
+                onClick={handleAutoClean}
+                className="px-4 py-2 rounded-2xl border border-transparent text-xs font-black uppercase tracking-[0.3em] bg-slate-900 text-white flex items-center gap-2 hover:bg-slate-800 transition-colors"
+              >
                 <Sparkles className="w-4 h-4" /> Temizliği Başlat
               </button>
             </div>
@@ -254,7 +278,10 @@ export const DataQualityPage: React.FC<Props> = ({ dataset }) => {
                 <p className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400">İyileştirme Planı</p>
                 <h3 className="text-xl font-black text-slate-900">Veri Sağlığı Uyarıları</h3>
               </div>
-              <button className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-[0.3em] flex items-center gap-2">
+              <button
+                onClick={() => onUpdateDataset({ ...dataset })}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-[0.3em] flex items-center gap-2 hover:bg-slate-50 active:scale-95 transition-all"
+              >
                 <RefreshCcw className="w-4 h-4" /> Tarama Yap
               </button>
             </div>
@@ -281,7 +308,10 @@ export const DataQualityPage: React.FC<Props> = ({ dataset }) => {
                 <p className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-400">Kolon Bazlı Kalite</p>
                 <h3 className="text-xl font-black text-slate-900">Kolon Analiz Raporu</h3>
               </div>
-              <button className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-[0.3em] flex items-center gap-2">
+              <button
+                onClick={handleFillMissing}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-black uppercase tracking-[0.3em] flex items-center gap-2 hover:bg-slate-50 transition-colors"
+              >
                 <TableIcon className="w-4 h-4" /> Tüm Boşlukları Temizle
               </button>
             </div>
@@ -324,13 +354,12 @@ export const DataQualityPage: React.FC<Props> = ({ dataset }) => {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.3em] ${
-                          col.status === 'risk'
-                            ? 'bg-rose-50 text-rose-600'
-                            : col.status === 'attention'
+                        <span className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.3em] ${col.status === 'risk'
+                          ? 'bg-rose-50 text-rose-600'
+                          : col.status === 'attention'
                             ? 'bg-amber-50 text-amber-600'
                             : 'bg-emerald-50 text-emerald-600'
-                        }`}>
+                          }`}>
                           {col.status === 'risk' ? 'Risk' : col.status === 'attention' ? 'İzle' : 'Temiz'}
                         </span>
                       </td>
