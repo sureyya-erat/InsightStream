@@ -83,27 +83,26 @@ const withRetry = async (fn, maxRetries = 3) => {
 const createSmtpTransporter = () => {
   if (!process.env.SMTP_HOST) return null;
 
-  // Use built-in 'service' for Gmail to handle complex auth/connection settings automatically
+  // Explicitly configure for stability on Render, ensuring IPv4 and Port 587 if possible
   const isGmail = process.env.SMTP_HOST.includes('gmail');
 
-  const config = isGmail ? {
-    service: 'Gmail',
-    family: 4, // Critical: Force IPv4 even for 'service: Gmail' due to Render IPv6 issues
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    }
-  } : {
+  // If it's Gmail, force Port 587 (STARTTLS) which is more reliable on cloud than 465
+  const config = {
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
+    port: isGmail ? 587 : parseInt(process.env.SMTP_PORT || '587'),
+    secure: isGmail ? false : (process.env.SMTP_SECURE === 'true'), // Gmail 587 requires secure: false
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    tls: { rejectUnauthorized: false },
-    connectionTimeout: 20000,
-    family: 4,
+    tls: {
+      ciphers: 'SSLv3', // Compatibility override 
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
+    family: 4, // Critical for Render
   };
 
   return nodemailer.createTransport(config);
