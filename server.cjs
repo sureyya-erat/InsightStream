@@ -92,7 +92,7 @@ const createSmtpTransporter = () => {
       pass: process.env.SMTP_PASS,
     },
     tls: { rejectUnauthorized: false },
-    connectionTimeout: 5000,
+    connectionTimeout: 20000, // Increased to 20s for cloud environments
   });
 };
 
