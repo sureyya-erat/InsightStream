@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { Sparkles, Upload, BarChart3, FileText, Globe, ShieldCheck, PlayCircle, ArrowRight, TrendingUp, MessageSquare, PieChart, Activity, Calendar } from 'lucide-react';
+import { Sparkles, Upload, BarChart3, FileText, Globe, ShieldCheck, PlayCircle, ArrowRight, TrendingUp, MessageSquare, PieChart, Activity, Calendar, ArrowUp } from 'lucide-react';
+import { APP_VERSION } from '../constants';
 
 interface Props {
   onStart: () => void;
@@ -41,7 +42,7 @@ const ProductMockup = () => (
         {/* Chart Mock */}
         <div className="h-40 w-full bg-slate-50 rounded-3xl border border-slate-100 p-4 flex items-end justify-between gap-2">
           {[40, 70, 45, 90, 65, 80, 55, 85].map((h, i) => (
-            <div key={i} className="bg-indigo-500 rounded-t-lg w-full transition-all duration-1000" style={{ height: `${h}%`, opacity: 0.1 + (h/100) }}></div>
+            <div key={i} className="bg-indigo-500 rounded-t-lg w-full transition-all duration-1000" style={{ height: `${h}%`, opacity: 0.1 + (h / 100) }}></div>
           ))}
         </div>
       </div>
@@ -77,6 +78,8 @@ const ProductMockup = () => (
 );
 
 export const LandingPage: React.FC<Props> = ({ onStart, onDemo, onTour }) => {
+  const [footerModal, setFooterModal] = React.useState<'privacy' | 'terms' | 'contact' | null>(null);
+
   const handleStartClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -125,16 +128,16 @@ export const LandingPage: React.FC<Props> = ({ onStart, onDemo, onTour }) => {
               Excel, CSV veya JSON dosyalarınızı saniyeler içinde profesyonel BI dashboard'larına dönüştürün. Gemini AI içgörüleri ve akıllı simülasyonlar ile verinizi konuşturun.
             </p>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-            <button 
+            <button
               type="button"
               onClick={handleStartClick}
               className="px-10 py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[1.5rem] font-black uppercase tracking-widest text-sm shadow-2xl shadow-indigo-200 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3"
             >
               <Upload className="w-5 h-5" /> Veri Yükleyerek Başla
             </button>
-            <button 
+            <button
               type="button"
               onClick={onTour}
               className="px-10 py-5 bg-white border border-slate-200 hover:bg-slate-50 text-indigo-600 rounded-[1.5rem] font-black uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-3 shadow-lg shadow-slate-100"
@@ -144,7 +147,7 @@ export const LandingPage: React.FC<Props> = ({ onStart, onDemo, onTour }) => {
           </div>
 
           <div className="pt-2">
-            <button 
+            <button
               type="button"
               onClick={handleDemoClick}
               className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 hover:text-indigo-600 flex items-center gap-2 transition-colors mx-auto lg:mx-0"
@@ -184,7 +187,7 @@ export const LandingPage: React.FC<Props> = ({ onStart, onDemo, onTour }) => {
             <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Kapsamlı BI Araç Kiti</h2>
             <p className="text-slate-500 font-medium">İhtiyacınız olan her şey tek bir platformda, kurulum gerektirmeden çalışır.</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
             {[
               { icon: <Upload className="w-6 h-6" />, title: "Akıllı Veri Ayrıştırma", desc: "Sütunları, tarih formatlarını ve sayısal değerleri otomatik tespit eder ve normalize eder." },
@@ -207,7 +210,7 @@ export const LandingPage: React.FC<Props> = ({ onStart, onDemo, onTour }) => {
           </div>
 
           <div className="mt-24 text-center">
-            <button 
+            <button
               type="button"
               onClick={handleStartClick}
               className="px-12 py-6 bg-slate-900 text-white rounded-3xl font-black uppercase tracking-[0.2em] text-xs hover:bg-slate-800 transition-all shadow-2xl active:scale-95"
@@ -219,15 +222,113 @@ export const LandingPage: React.FC<Props> = ({ onStart, onDemo, onTour }) => {
       </section>
 
       {/* Footer */}
-      <footer className="py-16 text-center">
-        <div className="flex items-center justify-center gap-2 mb-4 opacity-40">
-          <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white font-black text-xs">IS</div>
-          <span className="text-lg font-black text-slate-900 tracking-tight">InsightStream</span>
+      {/* Footer */}
+      <footer className="bg-white border-t border-slate-100 pt-16 pb-8">
+        <div className="max-w-7xl mx-auto px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-8 items-start">
+            {/* Left: Brand & Copyright */}
+            <div className="text-center lg:text-left space-y-4">
+              <div className="flex items-center justify-center lg:justify-start gap-2 opacity-80">
+                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center text-white font-black text-xs">IS</div>
+                <span className="text-lg font-black text-slate-900 tracking-tight">InsightStream</span>
+              </div>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">
+                © 2026 InsightStream. All rights reserved.
+              </p>
+            </div>
+
+            {/* Center: Links */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 lg:gap-8">
+              <button onClick={() => setFooterModal('privacy')} className="text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">Gizlilik Politikası</button>
+              <button onClick={() => setFooterModal('terms')} className="text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">Kullanım Şartları</button>
+              <button onClick={() => setFooterModal('contact')} className="text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">İletişim</button>
+            </div>
+
+            {/* Right: Credits & Version */}
+            <div className="text-center lg:text-right space-y-2">
+
+              <p className="text-[10px] text-slate-400 font-bold opacity-70 hover:opacity-100 transition-opacity pt-2">
+                v{APP_VERSION} • 2026
+              </p>
+            </div>
+          </div>
         </div>
-        <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em]">
-          © 2024 AI DASHBOARD BUILDER • POWERED BY GEMINI
-        </p>
+
+        {/* Back to Top Button */}
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-8 right-8 bg-white p-3 rounded-full shadow-lg border border-slate-100 text-slate-400 hover:text-indigo-600 hover:scale-110 transition-all z-[90] hidden md:flex items-center justify-center group"
+          aria-label="Yukarı Çık"
+          title="Yukarı Çık"
+        >
+          <ArrowUp className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
+        </button>
       </footer>
+
+      {/* Generic Modal */}
+      {footerModal && (
+        <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setFooterModal(null)}>
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in slide-in-from-bottom-4" onClick={e => e.stopPropagation()}>
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                {footerModal === 'privacy' && 'Gizlilik Politikası'}
+                {footerModal === 'terms' && 'Kullanım Şartları'}
+                {footerModal === 'contact' && 'İletişim'}
+              </h3>
+              <button onClick={() => setFooterModal(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <div className="w-5 h-5 text-slate-400">✕</div>
+              </button>
+            </div>
+            <div className="p-8 max-h-[60vh] overflow-y-auto">
+              {footerModal === 'privacy' && (
+                <div className="space-y-4 text-sm text-slate-600 font-medium leading-relaxed">
+                  <p>InsightStream, yüklediğiniz verileri analiz etmek için kullanır ve varsayılan olarak kalıcı şekilde saklamaz.</p>
+                  <ul className="list-disc pl-5 space-y-2 text-slate-500">
+                    <li>Verileriniz yalnızca analiz/raporlama işlemleri için işlenir.</li>
+                    <li>Sistem performansı ve hata ayıklama amacıyla anonim teknik günlükler tutulabilir.</li>
+                    <li>E-posta gönderimi gibi özelliklerde, yalnızca gerekli iletişim bilgileri kullanılır.</li>
+                  </ul>
+                  <p className="pt-2 text-indigo-600 font-bold">Sorularınız için İletişim bölümünden bize ulaşabilirsiniz.</p>
+                </div>
+              )}
+              {footerModal === 'terms' && (
+                <div className="space-y-4 text-sm text-slate-600 font-medium leading-relaxed">
+                  <p>InsightStream’i kullanarak aşağıdakileri kabul etmiş olursunuz:</p>
+                  <ul className="list-disc pl-5 space-y-2 text-slate-500">
+                    <li>Yüklediğiniz verilerin kullanım hakkına sahip olduğunuzu,</li>
+                    <li>Üretilen analizlerin bilgilendirme amaçlı olduğunu ve tek başına kesin karar mekanizması olmadığını,</li>
+                    <li>Sistemi kötüye kullanım, spam, yasa dışı içerik ve yetkisiz veri paylaşımı için kullanmayacağınızı.</li>
+                  </ul>
+                  <p className="pt-2 italic text-slate-400">Hizmet ve özellikler zaman içinde güncellenebilir.</p>
+                </div>
+              )}
+              {footerModal === 'contact' && (
+                <div className="space-y-6 text-sm text-slate-600 font-medium leading-relaxed">
+                  <p>Geri bildirim, hata bildirimi ve iş birliği için:</p>
+                  <div className="space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black uppercase text-slate-400 w-16">E-posta</span>
+                      <a href="mailto:sureyyaerat@gmail.com" className="text-indigo-600 hover:underline">sureyyaerat@gmail.com</a>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black uppercase text-slate-400 w-16">GitHub</span>
+                      <a href="https://github.com/sureyya-erat/InsightStream.git" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline truncate">github.com/sureyya-erat/InsightStream</a>
+                    </div>
+                  </div>
+                  <p className="text-xs text-amber-600 bg-amber-50 p-4 rounded-xl border border-amber-100">
+                    <strong>Not:</strong> Teknik destek taleplerinde ekran görüntüsü ve dataset şema bilgisi eklemek süreci hızlandırır.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button onClick={() => setFooterModal(null)} className="px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-colors">
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

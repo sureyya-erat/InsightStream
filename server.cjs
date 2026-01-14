@@ -16,7 +16,8 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 const getGeminiApiKey = () => {
   const apiKey = (process.env.GEMINI_API_KEY || '').trim();
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not configured');
+    console.warn('⚠️  GEMINI_API_KEY not configured. AI features will not work.');
+    return '';
   }
   return apiKey;
 };
@@ -26,21 +27,51 @@ if (process.env.NODE_ENV !== 'production') {
   console.log(`🔐 Gemini API key prefix loaded: ${prefix ? prefix + '***' : 'missing'}`);
 }
 
-const createModel = () => {
-  const ai = new GoogleGenerativeAI(getGeminiApiKey());
-  return ai.getGenerativeModel({ model: 'gemini-2.5-flash' });
+const PRIMARY_MODEL = 'gemini-2.5-flash';
+const SECONDARY_MODEL = 'gemini-2.5-flash-lite';
+
+// Helper to interact with Gemini API v1beta directly (SDK defaults to v1 usually)
+const generateGeminiContent = async (modelName, prompt) => {
+  const apiKey = getGeminiApiKey();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }]
+    })
+  });
+
+  if (!response.ok) {
+    let errMsg = response.statusText;
+    try {
+      const errBody = await response.json();
+      errMsg = errBody.error?.message || errMsg;
+    } catch (e) { /* ignore */ }
+    throw new Error(`${response.status} ${errMsg}`);
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text;
 };
 
 const withRetry = async (fn, maxRetries = 3) => {
   let lastError;
   for (let i = 0; i < maxRetries; i++) {
     try {
-      return await fn();
+      // Attempt with primary model first, switch to secondary on retry if quota/rate limit
+      const useSecondary = i > 0;
+      return await fn(useSecondary ? SECONDARY_MODEL : PRIMARY_MODEL);
     } catch (error) {
       lastError = error;
       const message = error?.message || '';
       const retryable = message.includes('429') || message.includes('503') || message.includes('quota');
+
       if (!retryable || i === maxRetries - 1) break;
+
+      console.warn(`⚠️  Attempt ${i + 1} failed with ${message.includes('429') ? 'Rate Limit' : 'Error'}. Retrying with fallback model...`);
+
       const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -657,13 +688,8 @@ Sadece aşağıdaki JSON şemasına %100 uyan geçerli JSON döndür. Markdown v
 Veriyi aynen kullan ve rakamları yorumla. JSON dışına çıkma.
 KPI özeti: ${JSON.stringify(context)}`;
 
-  const response = await withRetry(async () => {
-    const model = createModel();
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.35 },
-    });
-    const text = result.response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  const response = await withRetry(async (modelName) => {
+    const text = await generateGeminiContent(modelName, prompt);
     if (!text) throw new Error('Boş AI yanıtı');
     const cleaned = text.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
     return JSON.parse(cleaned);
@@ -714,16 +740,14 @@ app.post('/api/ai/insights', async (req, res) => {
   }
 
   try {
-    const text = await withRetry(async () => {
-      const model = createModel();
+    const text = await withRetry(async (modelName) => {
       const summaryString = JSON.stringify({
         name: dataset.name,
         stats: dataset.summary,
         activeFilters: filters,
       });
       const prompt = `As a Senior BI Analyst, provide narrative "AI Insights" for this dataset summary: ${summaryString}. Executive summary with bullet points. Answer in Turkish.`;
-      const response = await model.generateContent(prompt);
-      return response.response?.text() || 'Unable to generate insights.';
+      return await generateGeminiContent(modelName, prompt) || 'Unable to generate insights.';
     });
 
     res.json({ text });
@@ -740,8 +764,7 @@ app.post('/api/ai/chart-explanation', async (req, res) => {
   }
 
   try {
-    const text = await withRetry(async () => {
-      const model = createModel();
+    const text = await withRetry(async (modelName) => {
       const prompt = `
         As a BI Specialist, explain this specific chart:
         Title: "${chartTitle}"
@@ -753,8 +776,7 @@ app.post('/api/ai/chart-explanation', async (req, res) => {
         3. What to watch out for (1 bullet)
         Answer in Turkish language only.
       `;
-      const response = await model.generateContent(prompt);
-      return response.response?.text() || 'Açıklama üretilemedi.';
+      return await generateGeminiContent(modelName, prompt) || 'Açıklama üretilemedi.';
     });
 
     res.json({ text });
@@ -771,8 +793,7 @@ app.post('/api/ai/chat-plan', async (req, res) => {
   }
 
   try {
-    const plan = await withRetry(async () => {
-      const model = createModel();
+    const plan = await withRetry(async (modelName) => {
       const schema = JSON.stringify(dataset.mapping);
       const prompt = `You are InsightStream BI Co-Pilot. Convert the user's Turkish question into a JSON query plan. Respond with a valid JSON object only, without any backticks or code fences.
 

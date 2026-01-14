@@ -1,12 +1,14 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { BIChart } from './Charts';
 import { CalculationModule } from '../services/calculationModule';
-import { Dataset, DataRow, FilterState, SchemaMapping, CalculatedField } from '../types';
+import { Dataset, FilterState, ChartDefinition, SchemaMapping, CalculatedField, PinnedChart } from '../types';
 import { MONTH_ORDER, WEEKDAY_ORDER } from '../constants';
 import { EmailService, SmtpHealth } from '../services/emailService';
-import { 
-  Printer, Mail, Filter, X, AlertCircle, RotateCcw, 
-  Loader2, Send, CheckCircle2, ShieldAlert
+import { getAIInsights, getChartExplanation } from '../services/gemini';
+import {
+  Printer, Mail, Filter, X, AlertCircle, RotateCcw,
+  Loader2, Send, CheckCircle2, ShieldAlert, Sparkles, BrainCircuit
 } from 'lucide-react';
 
 interface Props {
@@ -15,43 +17,50 @@ interface Props {
   onStartTour: () => void;
 }
 
-type ChartType = 'bar' | 'pie' | 'line' | 'scatter' | 'area' | 'composed';
 
-interface ChartDefinition {
-  id: string;
-  title: string;
-  description: string;
-  type: ChartType;
-  data: any[];
-  dataKey?: string;
-  secondaryDataKey?: string;
-  categoryKey?: string;
-  layout?: 'horizontal' | 'vertical';
-  height?: number;
-  span?: number;
-}
 
 export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => {
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [activeMapping, setActiveMapping] = useState<SchemaMapping>(dataset.mapping);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [calculatedFields, setCalculatedFields] = useState<CalculatedField[]>([]);
-  
+
   // Email Modal States
   const [emailTo, setEmailTo] = useState('');
-  const [emailSubject, setEmailSubject] = useState(`InsightStream Raporu - ${dataset.name}`);
+  const [emailSubject, setEmailSubject] = useState('InsightStream Raporu - ' + dataset.name);
   const [emailMessage, setEmailMessage] = useState('');
   const [includePdf, setIncludePdf] = useState(true);
   const [emailLoading, setEmailLoading] = useState(false);
   const [healthStatus, setHealthStatus] = useState<SmtpHealth | null>(null);
   const [checkingHealth, setCheckingHealth] = useState(false);
 
+  // AI States
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [explanationModal, setExplanationModal] = useState<{ show: boolean; title: string; text: string; loading: boolean }>({
+    show: false, title: '', text: '', loading: false
+  });
+
   const [filterState, setFilterState] = useState<FilterState>({
     years: "ALL", months: "ALL", cities: "ALL", branches: "ALL", categories: "ALL",
     genericFilters: {}
   });
   const [activeCharts, setActiveCharts] = useState<string[]>([]);
+  const [pinnedCharts, setPinnedCharts] = useState<PinnedChart[]>([]);
   const chartSelectionInitialized = useRef(false);
+
+  useEffect(() => {
+    const key = `insightstream_pinned_${dataset.name}`;
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      try {
+        setPinnedCharts(JSON.parse(stored));
+      } catch (e) {
+        console.error("Failed to parse pinned charts", e);
+      }
+    }
+  }, [dataset.name]);
 
   const processedRows = useMemo(() => dataset.rows.map(r => CalculationModule.processRow(r, activeMapping, calculatedFields)), [dataset, activeMapping, calculatedFields]);
   const filteredRows = useMemo(() => CalculationModule.applyFilters(processedRows, filterState, activeMapping), [processedRows, filterState, activeMapping]);
@@ -59,16 +68,16 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
 
   const filterSummary = useMemo(() => {
     const parts = [];
-    if (filterState.years !== "ALL") parts.push(`Yıl: ${filterState.years.join(', ')}`);
-    if (filterState.months !== "ALL") parts.push(`Ay: ${filterState.months.map(m => MONTH_ORDER[(m as any) - 1]).join(', ')}`);
-    if (filterState.cities !== "ALL") parts.push(`Şehir: ${filterState.cities.join(', ')}`);
-    if (filterState.branches !== "ALL") parts.push(`Şube: ${filterState.branches.join(', ')}`);
-    if (filterState.categories !== "ALL") parts.push(`Kategori: ${filterState.categories.join(', ')}`);
+    if (filterState.years !== "ALL") parts.push(`Yıl: ${filterState.years.join(', ')} `);
+    if (filterState.months !== "ALL") parts.push(`Ay: ${filterState.months.map(m => MONTH_ORDER[(m as any) - 1]).join(', ')} `);
+    if (filterState.cities !== "ALL") parts.push(`Şehir: ${filterState.cities.join(', ')} `);
+    if (filterState.branches !== "ALL") parts.push(`Şube: ${filterState.branches.join(', ')} `);
+    if (filterState.categories !== "ALL") parts.push(`Kategori: ${filterState.categories.join(', ')} `);
     return parts.length > 0 ? parts.join(' | ') : 'Filtre: Tümü';
   }, [filterState]);
 
   useEffect(() => {
-    setEmailMessage(`Merhaba,\n\nEkte ${dataset.name} veri seti için hazırlanan dashboard raporunu bulabilirsiniz.\n\nFiltreler: ${filterSummary}\n\nİyi çalışmalar,\nInsightStream Ekibi`);
+    setEmailMessage(`Merhaba, \n\nEkte ${dataset.name} veri seti için hazırlanan dashboard raporunu bulabilirsiniz.\n\nFiltreler: ${filterSummary} \n\nİyi çalışmalar, \nInsightStream Ekibi`);
   }, [dataset.name, filterSummary]);
 
   const checkHealth = async () => {
@@ -96,13 +105,38 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
       const imgProps = pdf.getImageProperties(imgData);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
+
       pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       return pdf.output('datauristring').split(',')[1];
     } catch (e) {
       console.error("PDF creation failed", e);
       return null;
     }
+  };
+
+  const handleRunAIAnalysis = async () => {
+    setShowAIModal(true);
+    setAiAnalysisResult('');
+    setIsAnalyzing(true);
+
+    // Construct a lightweight summary for AI to avoid token limits
+    const summaryPayload = {
+      datasetName: dataset.name,
+      kpis,
+      topSegments: categoryMargin.slice(0, 5).map(c => `${c.label}: ${c.value.toLocaleString()} `),
+      topCities: cityPerformance.slice(0, 5).map(c => `${c.label}: ${c.value.toLocaleString()} `),
+      monthlyTrend: monthlyPerformance.map(m => `${m.label}: ${m.value} `),
+    };
+
+    const result = await getAIInsights({ ...dataset, rows: [] }, summaryPayload); // Send summary not full rows
+    setAiAnalysisResult(result);
+    setIsAnalyzing(false);
+  };
+
+  const handleExplainChart = async (title: string, type: string) => {
+    setExplanationModal({ show: true, title, text: '', loading: true });
+    const text = await getChartExplanation(title, type);
+    setExplanationModal(prev => ({ ...prev, text, loading: false }));
   };
 
   const handleSendEmail = async () => {
@@ -113,7 +147,7 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
 
     setEmailLoading(true);
     let attachments = [];
-    
+
     if (includePdf) {
       const pdfBase64 = await generatePdfBase64();
       if (pdfBase64) {
@@ -126,7 +160,7 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
     }
 
     const htmlBody = `
-      <div style="font-family: sans-serif; color: #1e293b; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 20px;">
+  < div style = "font-family: sans-serif; color: #1e293b; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 20px;" >
         <h2 style="color: #4f46e5; margin-bottom: 20px;">InsightStream BI Raporu</h2>
         <p style="white-space: pre-line; font-size: 14px; line-height: 1.6;">${emailMessage}</p>
         
@@ -147,8 +181,8 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
         <p style="font-size: 11px; color: #cbd5e1; text-align: center; margin-top: 30px; border-top: 1px solid #f1f5f9; padding-top: 15px;">
           Bu rapor InsightStream AI tarafından otomatik üretilmiştir.
         </p>
-      </div>
-    `;
+      </div >
+  `;
 
     const res = await EmailService.sendWithAttachment({
       to: emailTo,
@@ -159,10 +193,10 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
 
     setEmailLoading(false);
     if (res.success) {
-      alert(`Rapor başarıyla gönderildi! (${res.provider?.toUpperCase()})`);
+      alert(`Rapor başarıyla gönderildi!(${res.provider?.toUpperCase()})`);
       setShowEmailModal(false);
     } else {
-      alert(`Hata: ${res.error}`);
+      alert(`Hata: ${res.error} `);
     }
   };
 
@@ -283,8 +317,31 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
   const paretoData = useMemo(() => CalculationModule.getParetoData(filteredRows), [filteredRows]);
   const bubbleMatrix = useMemo(() => CalculationModule.getPriceQtyBubbleData(filteredRows), [filteredRows]);
 
+  // New Calculated Data for Extra Charts
+  const topProducts = useMemo(() => CalculationModule.getTopProducts(filteredRows), [filteredRows]);
+  const marginTrend = useMemo(() => CalculationModule.getProfitMarginTrend(filteredRows), [filteredRows]);
+  const cumulativeGrowth = useMemo(() => CalculationModule.getCumulativeRevenue(filteredRows), [filteredRows]);
+  const orderSizeDist = useMemo(() => CalculationModule.getGroupedData(filteredRows, 'QTY_SOLD_final', 'TX_ID_final', 'COUNT'), [filteredRows]); // Simplified histogram proxy
+
+  const forecastData = useMemo(() => CalculationModule.getForecastData(filteredRows), [filteredRows]);
+
   const chartDefinitions = useMemo<ChartDefinition[]>(() => {
     const defs: ChartDefinition[] = [];
+
+    // 1. Forecast Chart (Always Top)
+    if (forecastData.length) {
+      defs.push({
+        id: 'monthly-forecast',
+        title: 'Aylık Kâr Performansı ve Tahmin',
+        description: 'Gerçekleşen veriler ve gelecek dönem tahmini.',
+        type: 'line',
+        data: forecastData,
+        dataKey: 'actual', // BIChart handles 'actual'/'forecast' keys specifically for line charts
+        height: 400,
+        span: 2
+      });
+    }
+
     if (monthlyPerformance.length) {
       defs.push({
         id: 'monthly-performance',
@@ -360,6 +417,23 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
         height: 340,
       });
     }
+    if (pinnedCharts.length) {
+      pinnedCharts.forEach(p => {
+        defs.push({
+          id: p.id,
+          title: p.title,
+          description: 'Sohbet ile oluşturulan analiz grafiği.',
+          type: p.type,
+          data: p.data,
+          dataKey: 'value', // Chat usually returns data with 'value' key or dynamic based on plan, but 'value' is common in BIChart for simple charts
+          // If the chat data structure is different, we might need to adapt. 
+          // ChatPage uses BIChart with minimal=true. 
+          // Let's assume standard BIChart keys. ChatPage.tsx uses msg.data which comes from executeQueryPlan which usually outputs { label, value }.
+          height: 320,
+        });
+      });
+    }
+
     if (bubbleMatrix.isFallback) {
       if (bubbleMatrix.fallbackData?.length) {
         defs.push({
@@ -382,8 +456,62 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
         height: 360,
       });
     }
+
+    // NEW CHARTS
+    if (topProducts.length) {
+      defs.push({
+        id: 'top-products',
+        title: 'En Çok Satan Ürünler',
+        description: 'Ciro bazında lider ürünler.',
+        type: 'bar',
+        data: topProducts,
+        dataKey: 'value',
+        layout: 'vertical',
+        height: 400,
+        span: 2
+      });
+    }
+
+    if (marginTrend.length) {
+      defs.push({
+        id: 'margin-trend',
+        title: 'Kâr Marjı Trendi',
+        description: 'Aylık ortalama kârlılık oranı değişimi.',
+        type: 'line',
+        data: marginTrend,
+        dataKey: 'margin',
+        height: 320,
+        valueFormatter: (val) => `% ${val.toFixed(1)} `
+      });
+    }
+
+    if (cumulativeGrowth.length) {
+      defs.push({
+        id: 'cumulative-growth',
+        title: 'Kümülatif Büyüme',
+        description: 'Dönem başından itibaren toplam ciro birikimi.',
+        type: 'area',
+        data: cumulativeGrowth,
+        dataKey: 'value',
+        height: 320,
+        span: 2
+      });
+    }
+
+    if (orderSizeDist.length) {
+      defs.push({
+        id: 'order-dist',
+        title: 'Sipariş Miktarı Dağılımı',
+        description: 'Hangi miktarlarda satış yapılıyor?',
+        type: 'bar',
+        data: orderSizeDist,
+        dataKey: 'value',
+        height: 320,
+      });
+    }
+
     return defs;
-  }, [monthlyPerformance, weekdayRhythm, categoryMargin, cityPerformance, basketTrend, paretoData, bubbleMatrix]);
+  }, [monthlyPerformance, weekdayRhythm, categoryMargin, cityPerformance, basketTrend, paretoData, bubbleMatrix, topProducts, marginTrend, cumulativeGrowth, orderSizeDist]);
 
   const chartLibrary = useMemo(() => {
     return chartDefinitions.reduce<Record<string, ChartDefinition>>((acc, def) => {
@@ -393,7 +521,7 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
   }, [chartDefinitions]);
   const chartOptionsList = useMemo(() => Object.values(chartLibrary), [chartLibrary]);
 
-  const chartSelectionKey = useMemo(() => `dashboardChartSelection:${dataset.name}`, [dataset.name]);
+  const chartSelectionKey = useMemo(() => `dashboardChartSelection:${dataset.name} `, [dataset.name]);
   const activeChartDefinitions = useMemo(() => activeCharts.map(id => chartLibrary[id]).filter((def): def is ChartDefinition => Boolean(def)), [activeCharts, chartLibrary]);
 
   useEffect(() => {
@@ -416,7 +544,8 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
       }
     }
     if (!initial.length) {
-      initial = availableIds.slice(0, Math.min(3, availableIds.length));
+      // Show more charts by default now that we have 10
+      initial = availableIds.slice(0, Math.min(6, availableIds.length));
     }
     setActiveCharts(initial);
     chartSelectionInitialized.current = true;
@@ -494,16 +623,16 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
   const MultiSelectSlicer = ({ title, options, selected, onToggle, onClear }: any) => (
     <div className="pb-6 border-b border-slate-100 last:border-0 space-y-3">
       <div className="flex justify-between items down">
-        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{title}</label>
+        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{title}</label>
         <button onClick={onClear} className="text-[10px] text-indigo-500 font-bold hover:underline">Temizle</button>
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        <button onClick={onClear} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${selected === "ALL" ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200'}`}>Tümü</button>
+      <div className="flex flex-wrap gap-2">
+        <button onClick={onClear} className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${selected === "ALL" ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300'}`}>Tümü</button>
         {options.map((opt: any) => {
           const id = opt.id !== undefined ? opt.id : opt;
           const label = opt.name || opt;
           const active = selected !== "ALL" && selected.includes(id);
-          return <button key={id} onClick={() => onToggle(id)} className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200'}`}>{label}</button>;
+          return <button key={id} onClick={() => onToggle(id)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${active ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300'}`}>{label}</button>;
         })}
       </div>
     </div>
@@ -517,11 +646,11 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
           <button onClick={() => setFilterState({ years: "ALL", months: "ALL", cities: "ALL", branches: "ALL", categories: "ALL", genericFilters: {} })} className="p-2 text-slate-400 hover:text-indigo-600"><RotateCcw className="w-4 h-4" /></button>
         </div>
         <div className="space-y-2">
-          <MultiSelectSlicer title="Yıl" options={options.years} selected={filterState.years} onToggle={(v:any)=>toggleFilter('years', v)} onClear={()=>setFilterState(p=>({...p, years:"ALL"}))} />
-          <MultiSelectSlicer title="Ay" options={options.months} selected={filterState.months} onToggle={(v:any)=>toggleFilter('months', v)} onClear={()=>setFilterState(p=>({...p, months:"ALL"}))} />
-          <MultiSelectSlicer title="Şehir" options={options.cities} selected={filterState.cities} onToggle={(v:any)=>toggleFilter('cities', v)} onClear={()=>setFilterState(p=>({...p, cities:"ALL"}))} />
-          <MultiSelectSlicer title="Şube" options={options.branches} selected={filterState.branches} onToggle={(v:any)=>toggleFilter('branches', v)} onClear={()=>setFilterState(p=>({...p, branches:"ALL"}))} />
-          <MultiSelectSlicer title="Kategori" options={options.categories} selected={filterState.categories} onToggle={(v:any)=>toggleFilter('categories', v)} onClear={()=>setFilterState(p=>({...p, categories:"ALL"}))} />
+          <MultiSelectSlicer title="Yıl" options={options.years} selected={filterState.years} onToggle={(v: any) => toggleFilter('years', v)} onClear={() => setFilterState(p => ({ ...p, years: "ALL" }))} />
+          <MultiSelectSlicer title="Ay" options={options.months} selected={filterState.months} onToggle={(v: any) => toggleFilter('months', v)} onClear={() => setFilterState(p => ({ ...p, months: "ALL" }))} />
+          <MultiSelectSlicer title="Şehir" options={options.cities} selected={filterState.cities} onToggle={(v: any) => toggleFilter('cities', v)} onClear={() => setFilterState(p => ({ ...p, cities: "ALL" }))} />
+          <MultiSelectSlicer title="Şube" options={options.branches} selected={filterState.branches} onToggle={(v: any) => toggleFilter('branches', v)} onClear={() => setFilterState(p => ({ ...p, branches: "ALL" }))} />
+          <MultiSelectSlicer title="Kategori" options={options.categories} selected={filterState.categories} onToggle={(v: any) => toggleFilter('categories', v)} onClear={() => setFilterState(p => ({ ...p, categories: "ALL" }))} />
         </div>
       </aside>
 
@@ -532,8 +661,14 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
             <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight">{dataset.name}</h1>
           </div>
           <div className="flex gap-2">
-            <button 
-              onClick={() => { setShowEmailModal(true); checkHealth(); }} 
+            <button
+              onClick={handleRunAIAnalysis}
+              className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-100 hover:shadow-lg transition-all"
+            >
+              <Sparkles className="w-4 h-4" /> Yapay Zeka Analizi
+            </button>
+            <button
+              onClick={() => { setShowEmailModal(true); checkHealth(); }}
               className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-700 shadow-lg shadow-indigo-100"
             >
               <Mail className="w-4 h-4" /> E-posta Gönder
@@ -547,28 +682,39 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
         <main className="p-8 space-y-12">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {[
-              { label: 'Ciro', value: `₺${kpis.revenue.toLocaleString()}`, color: 'text-indigo-600', icon: '💰', bg: 'bg-indigo-50' },
-              { label: 'Kâr', value: `₺${kpis.profit.toLocaleString()}`, color: 'text-emerald-600', icon: '📈', bg: 'bg-emerald-50' },
+              { label: 'Ciro', value: `₺${kpis.revenue.toLocaleString()} `, color: 'text-indigo-600', icon: '💰', bg: 'bg-indigo-50' },
+              { label: 'Kâr', value: `₺${kpis.profit.toLocaleString()} `, color: 'text-emerald-600', icon: '📈', bg: 'bg-emerald-50' },
               { label: 'Satılan Birim', value: kpis.units.toLocaleString(), color: 'text-orange-600', icon: '📦', bg: 'bg-orange-50' },
               { label: 'İşlem', value: kpis.txns.toLocaleString(), color: 'text-slate-600', icon: '🧾', bg: 'bg-slate-50' }
             ].map(k => (
-              <div key={k.label} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all hover:shadow-lg">
-                <div><p className="text-[10px] font-black text-slate-400 uppercase mb-1">{k.label}</p><h4 className={`text-3xl font-black ${k.color}`}>{k.value}</h4></div>
-                <div className={`${k.bg} w-14 h-14 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform no-print`}>{k.icon}</div>
+              <div key={k.label} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all hover:shadow-lg">
+                <div><p className="text-xs font-bold text-slate-400 uppercase mb-2 tracking-wider">{k.label}</p><h4 className={`text-4xl font-black ${k.color}`}>{k.value}</h4></div>
+                <div className={`${k.bg} w-16 h-16 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform no-print`}>{k.icon}</div>
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-12">
-              <BIChart id="monthly-profit" datasetId={dataset.name} title="AYLIK KÂR PERFORMANSI" type="line" data={CalculationModule.getForecastData(filteredRows)} height={400} />
-            </div>
-            <div className="lg:col-span-6">
-              <BIChart id="category-tx" datasetId={dataset.name} title="KATEGORİ İŞLEM PAYI" type="bar" data={CalculationModule.getTransactionsByCategory(filteredRows)} layout="vertical" height={400} />
-            </div>
-            <div className="lg:col-span-6">
-              <BIChart id="branch-rev" datasetId={dataset.name} title="ŞUBE BAZLI CİRO" type="bar" data={branchRevenue} height={400} />
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {chartDefinitions.map((def) => (
+              <div key={def.id} className={def.span === 2 ? 'lg:col-span-2' : ''}>
+                <BIChart
+                  id={def.id}
+                  datasetId={dataset.name}
+                  title={def.title}
+                  subtitle={def.description}
+                  type={def.type}
+                  data={def.data}
+                  dataKey={def.dataKey}
+                  secondaryDataKey={def.secondaryDataKey}
+                  categoryKey={def.categoryKey}
+                  layout={def.layout}
+                  height={def.height || 360}
+
+                  valueFormatter={def.valueFormatter}
+                  onExplain={handleExplainChart}
+                />
+              </div>
+            ))}
           </div>
 
         </main>
@@ -584,7 +730,7 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
             </div>
 
             <div className="p-8 space-y-4">
-              <div className={`p-4 rounded-xl border flex flex-col gap-2 ${checkingHealth ? 'bg-slate-50 border-slate-100' : (healthStatus?.ok ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100')}`}>
+              <div className={`p - 4 rounded - xl border flex flex - col gap - 2 ${checkingHealth ? 'bg-slate-50 border-slate-100' : (healthStatus?.ok ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100')} `}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {checkingHealth ? <Loader2 className="w-4 h-4 animate-spin text-slate-400" /> : (healthStatus?.ok ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <ShieldAlert className="w-4 h-4 text-rose-600" />)}
@@ -602,12 +748,12 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
               <div className="space-y-4">
                 <div>
                   <label className="text-[10px] font-black uppercase text-slate-400">Alıcı(lar)</label>
-                  <input 
-                    type="text" 
-                    value={emailTo} 
-                    onChange={e => setEmailTo(e.target.value)} 
-                    placeholder=" patron@sirket.com, analiz@is.com" 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold mt-1 outline-none focus:ring-2 focus:ring-indigo-500" 
+                  <input
+                    type="text"
+                    value={emailTo}
+                    onChange={e => setEmailTo(e.target.value)}
+                    placeholder=" patron@sirket.com, analiz@is.com"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold mt-1 outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
@@ -619,8 +765,8 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
                   <textarea rows={4} value={emailMessage} onChange={e => setEmailMessage(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-bold mt-1 outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
                 <label className="flex items-center gap-3 cursor-pointer">
-                  <div className={`w-10 h-6 rounded-full p-1 transition-colors ${includePdf ? 'bg-indigo-600' : 'bg-slate-200'}`}>
-                    <div className={`w-4 h-4 bg-white rounded-full transition-transform ${includePdf ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                  <div className={`w - 10 h - 6 rounded - full p - 1 transition - colors ${includePdf ? 'bg-indigo-600' : 'bg-slate-200'} `}>
+                    <div className={`w - 4 h - 4 bg - white rounded - full transition - transform ${includePdf ? 'translate-x-4' : 'translate-x-0'} `}></div>
                     <input type="checkbox" className="hidden" checked={includePdf} onChange={e => setIncludePdf(e.target.checked)} />
                   </div>
                   <span className="text-xs font-black uppercase text-slate-600 tracking-tight">PDF Eki Ekle</span>
@@ -630,8 +776,8 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
 
             <div className="p-6 bg-slate-50 flex justify-end gap-3">
               <button onClick={() => setShowEmailModal(false)} className="px-6 py-3 text-slate-400 font-black uppercase text-xs">Vazgeç</button>
-              <button 
-                onClick={handleSendEmail} 
+              <button
+                onClick={handleSendEmail}
                 disabled={emailLoading || !emailTo || !healthStatus?.ok}
                 className="px-10 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-100 flex items-center gap-2 disabled:opacity-50"
               >
@@ -641,6 +787,61 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
           </div>
         </div>
       )}
-    </div>
+
+      {/* AI INSIGHTS MODAL */}
+      {
+        showAIModal && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm no-print animate-in fade-in duration-300">
+            <div className="bg-white w-full max-w-4xl max-h-[85vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-8">
+              <div className="p-8 bg-gradient-to-r from-violet-600 to-indigo-600 text-white flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-3"><BrainCircuit className="w-8 h-8 opacity-80" /><h3 className="font-black uppercase text-lg tracking-widest">Yapay Zeka Analiz Raporu</h3></div>
+                <button onClick={() => setShowAIModal(false)}><X className="w-6 h-6 hover:rotate-90 transition-transform" /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-10 bg-slate-50">
+                {isAnalyzing ? (
+                  <div className="flex flex-col items-center justify-center h-64 gap-6 text-slate-400">
+                    <div className="relative">
+                      <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                      <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-indigo-600 animate-pulse" />
+                    </div>
+                    <p className="text-sm font-bold uppercase tracking-widest animate-pulse">Veriler Analiz Ediliyor...</p>
+                  </div>
+                ) : (
+                  <div className="prose prose-indigo max-w-none">
+                    <div className="whitespace-pre-wrap text-slate-600 text-sm leading-relaxed font-medium">
+                      {aiAnalysisResult}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="p-6 bg-white border-t border-slate-100 shrink-0 flex justify-end">
+                <button onClick={() => setShowAIModal(false)} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800">Kapat</button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      {/* EXPLANATION MODAL */}
+      {
+        explanationModal.show && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm no-print animate-in fade-in">
+            <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="p-6 bg-white border-b border-slate-100 flex justify-between items-center">
+                <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-2"><Sparkles className="w-4 h-4 text-orange-500" /> {explanationModal.title}</h3>
+                <button onClick={() => setExplanationModal(p => ({ ...p, show: false }))}><X className="w-4 h-4 text-slate-400 hover:text-red-500" /></button>
+              </div>
+              <div className="p-6 max-h-[60vh] overflow-y-auto">
+                {explanationModal.loading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 text-indigo-600 animate-spin" /></div>
+                ) : (
+                  <p className="text-sm text-slate-600 leading-relaxed">{explanationModal.text}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 };

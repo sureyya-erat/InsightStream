@@ -36,6 +36,7 @@ export interface SchemaMapping {
   revenue: string | null;
   profit: string | null;
   cost: string | null;
+  discount: string | null;
 }
 
 export interface AnalysisRecord {
@@ -194,4 +195,21 @@ export interface StrategicAnnualSummary {
   riskAlerts: RiskAlert[];
   strategicActions: StrategicAction[];
   metadata?: Record<string, any>;
+}
+
+export type ChartType = 'bar' | 'pie' | 'line' | 'scatter' | 'area' | 'composed';
+
+export interface ChartDefinition {
+  id: string;
+  title: string;
+  description: string;
+  type: ChartType;
+  data: any[];
+  dataKey?: string;
+  secondaryDataKey?: string;
+  categoryKey?: string;
+  layout?: 'horizontal' | 'vertical';
+  height?: number;
+  span?: number;
+  valueFormatter?: (value: number, name?: string) => string;
 }

@@ -24,6 +24,16 @@ export const ChatPage: React.FC<Props> = ({ dataset, onApplyFilters, filterState
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [chatHistory]);
 
+  useEffect(() => {
+    const storageKey = `insightstream_pinned_${dataset.name}`;
+    try {
+      const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      if (Array.isArray(existing)) {
+        setPinnedIds(existing.map((item: any) => item.id));
+      }
+    } catch (e) { console.error(e); }
+  }, [dataset.name]);
+
   const quickQuestions = [
     "En kârlı şube hangisi?",
     "En çok ciro getiren kategori hangisi?",
@@ -69,19 +79,19 @@ export const ChatPage: React.FC<Props> = ({ dataset, onApplyFilters, filterState
 
       const data = CalculationModule.executeQueryPlan(filtered, plan);
       const topVal = data[0];
-      
+
       const answer = plan.intent === 'topN' && topVal
         ? `${plan.metric === 'revenue' ? 'Ciro' : 'Kâr'} açısından en başarılı ${plan.groupBy === 'branch' ? 'şube' : 'kategori'} ${topVal.label} olarak görülüyor (₺${topVal.value.toLocaleString()}).`
         : `Verileriniz üzerinde ${plan.groupBy} bazlı analiz gerçekleştirildi.`;
 
-      const aiMsg = { 
-        role: 'ai', 
-        content: answer, 
-        data, 
+      const aiMsg = {
+        role: 'ai',
+        content: answer,
+        data,
         plan,
-        suggestedFilters: plan.filters 
+        suggestedFilters: plan.filters
       };
-      
+
       setChatHistory(prev => [...prev, aiMsg]);
 
       // Save to History
@@ -117,11 +127,11 @@ export const ChatPage: React.FC<Props> = ({ dataset, onApplyFilters, filterState
       <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-6 pr-4 scroll-smooth">
         {chatHistory.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-40">
-             <Terminal className="w-16 h-16" />
-             <div className="space-y-2">
-               <p className="font-black uppercase tracking-widest text-xs">Analize Hazır</p>
-               <p className="text-sm">Bir soru sorun veya aşağıdaki önerileri kullanın.</p>
-             </div>
+            <Terminal className="w-16 h-16" />
+            <div className="space-y-2">
+              <p className="font-black uppercase tracking-widest text-xs">Analize Hazır</p>
+              <p className="text-sm">Bir soru sorun veya aşağıdaki önerileri kullanın.</p>
+            </div>
           </div>
         )}
 
@@ -131,36 +141,35 @@ export const ChatPage: React.FC<Props> = ({ dataset, onApplyFilters, filterState
               <div className="mb-4">
                 <p className="text-sm font-bold leading-relaxed">{msg.content}</p>
               </div>
-              
+
               {msg.data && (
                 <div className="mt-4 pt-4 border-t border-slate-50 space-y-4">
                   <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
-                    <BIChart 
-                      title={(msg.plan.titleTR || `${msg.plan.metric.toUpperCase()} ANALİZİ`).toUpperCase()} 
-                      type={msg.plan.chart || 'bar'} 
-                      data={msg.data} 
-                      height={160} 
+                    <BIChart
+                      title={(msg.plan.titleTR || `${msg.plan.metric.toUpperCase()} ANALİZİ`).toUpperCase()}
+                      type={msg.plan.chart || 'bar'}
+                      data={msg.data}
+                      height={160}
                       minimal={true}
                     />
                   </div>
-                  
+
                   <div className="flex flex-col sm:flex-row gap-2 pt-2">
                     {msg.suggestedFilters && (
-                      <button 
+                      <button
                         onClick={() => onApplyFilters(msg.suggestedFilters)}
                         className="flex-1 py-2.5 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-100 transition-colors"
                       >
                         <Filter className="w-3 h-3" /> Filtreleri Uygula
                       </button>
                     )}
-                    <button 
+                    <button
                       onClick={() => handlePin(msg, idx)}
                       disabled={pinnedIds.includes(`pinned_${dataset.name}_${idx}`)}
-                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${
-                        pinnedIds.includes(`pinned_${dataset.name}_${idx}`)
-                        ? 'bg-emerald-50 text-emerald-600 cursor-default'
-                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                      }`}
+                      className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${pinnedIds.includes(`pinned_${dataset.name}_${idx}`)
+                          ? 'bg-emerald-50 text-emerald-600 cursor-default'
+                          : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                        }`}
                     >
                       {pinnedIds.includes(`pinned_${dataset.name}_${idx}`) ? (
                         <><CheckCircle2 className="w-3 h-3" /> Dashboard'a Eklendi</>
@@ -193,7 +202,7 @@ export const ChatPage: React.FC<Props> = ({ dataset, onApplyFilters, filterState
           ))}
         </div>
         <div className="relative group">
-          <input 
+          <input
             type="text"
             value={question}
             onChange={e => setQuestion(e.target.value)}
@@ -201,7 +210,7 @@ export const ChatPage: React.FC<Props> = ({ dataset, onApplyFilters, filterState
             placeholder="Veri hakkında bir soru sorun..."
             className="w-full bg-white border border-slate-200 rounded-2xl p-4 pr-14 text-sm font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-xl shadow-slate-100"
           />
-          <button 
+          <button
             onClick={() => handleAsk()}
             className="absolute right-3 top-2.5 p-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
           >

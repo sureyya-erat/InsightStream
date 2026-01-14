@@ -48,16 +48,74 @@ export class CalculationModule {
 
     const price = this.normalizeNumeric(row[map.price || '']);
     const qty = this.normalizeNumeric(row[map.qty || '']);
-    const rawMargin = this.normalizeNumeric(row[map.margin || '']);
-    const marginRate = rawMargin > 1 ? rawMargin / 100 : rawMargin;
-    const revCalc = price * qty;
-    const profitFromMargin = revCalc * marginRate;
+    const discount = this.normalizeNumeric(row[map.discount || '']);
 
-    d['REVENUE_final'] = map.revenue ? this.normalizeNumeric(row[map.revenue]) : (revCalc || 0);
-    d['PROFIT_final'] = map.profit ? this.normalizeNumeric(row[map.profit]) : (profitFromMargin || 0);
+    // --- Smart Derivation Logic ---
+    let revenue = this.normalizeNumeric(row[map.revenue || '']);
+    let profit = this.normalizeNumeric(row[map.profit || '']);
+    let cost = this.normalizeNumeric(row[map.cost || '']);
+    let marginRate = this.normalizeNumeric(row[map.margin || '']);
+    if (marginRate > 1) marginRate = marginRate / 100;
+
+    // 1. Derive Revenue
+    if (!revenue && price && qty) {
+      revenue = price * qty;
+    }
+
+    // 2. Net Revenue Adjustment (if not already net)
+    // If we calculated revenue from Price*Qty, it's Gross. If there's a discount, substr.
+    // If revenue came from a column, check if 'Net' is in name? (For now assume manual priority)
+    if (discount) {
+      // If revenue was derived or looks like gross, apply discount
+      // Simplification: We treat 'revenue' as the final sales amount.
+      // If column matches 'Revenue', we assume it's net unless logic suggests otherwise.
+      // Here we subtract discount ONLY if revenue was derived OR explicit logical gap.
+      // For safety: Let's assume calculated revenue is Gross.
+      if (!row[map.revenue || ''] && price && qty) {
+        revenue -= discount;
+      }
+    }
+
+    // 3. Derive Cost / Profit / Margin Triangulation
+    // Equation: Profit = Revenue - Cost
+
+    // Case A: Have Revenue & Cost -> Calc Profit
+    if (!profit && revenue && cost) {
+      profit = revenue - cost;
+    }
+
+    // Case B: Have Revenue & Profit -> Calc Cost
+    if (!cost && revenue && profit) {
+      cost = revenue - profit;
+    }
+
+    // Case C: Have Revenue & Margin -> Calc Profit & Cost
+    if (!profit && revenue && marginRate) {
+      profit = revenue * marginRate;
+      if (!cost) cost = revenue - profit;
+    }
+
+    // Case D: Have Cost & Margin -> Calc Revenue & Profit (Markup)
+    // Margin here is usually Profit/Revenue. Markup is Profit/Cost. 
+    // Let's assume standard margin defined as Profit/Revenue.
+    // Rev = Cost / (1 - Margin)
+    if (!revenue && cost && marginRate && marginRate < 1) {
+      revenue = cost / (1 - marginRate);
+      profit = revenue * marginRate;
+    }
+
+    // fallback final check
+    if (!marginRate && revenue) {
+      marginRate = profit / revenue;
+    }
+
+    d['REVENUE_final'] = revenue || 0;
+    d['PROFIT_final'] = profit || 0;
+    d['COST_final'] = cost || (revenue - profit) || 0;
     d['QTY_SOLD_final'] = qty || 0;
-    d['UNIT_PRICE_final'] = price || 0;
+    d['UNIT_PRICE_final'] = price || (qty ? revenue / qty : 0);
     d['MARGIN_RATE_final'] = marginRate || 0;
+
     d['PRODUCT_ID_final'] = String(row['PRODUCT ID'] || row['Product'] || row['UrunID'] || 'UNK_PROD');
     d['TX_ID_final'] = String(row[map.txId || ''] || 'TX_' + Math.random());
 
@@ -140,17 +198,17 @@ export class CalculationModule {
   }
 
   static executeQueryPlan(rows: DataRow[], plan: any) {
-    const metricKey = plan.metric === 'profit' ? 'PROFIT_final' : 
-                     plan.metric === 'units' ? 'QTY_SOLD_final' : 
-                     plan.metric === 'transactions' ? 'TX_ID_final' : 'REVENUE_final';
+    const metricKey = plan.metric === 'profit' ? 'PROFIT_final' :
+      plan.metric === 'units' ? 'QTY_SOLD_final' :
+        plan.metric === 'transactions' ? 'TX_ID_final' : 'REVENUE_final';
 
     const groupKey = plan.groupBy === 'branch' ? 'BRANCH_final' :
-                    plan.groupBy === 'city' ? 'CITY_final' :
-                    plan.groupBy === 'month' ? 'MONTH_final' :
-                    plan.groupBy === 'weekday' ? 'WEEKDAY_final' : 'CATEGORY_final';
+      plan.groupBy === 'city' ? 'CITY_final' :
+        plan.groupBy === 'month' ? 'MONTH_final' :
+          plan.groupBy === 'weekday' ? 'WEEKDAY_final' : 'CATEGORY_final';
 
-    const indexKey = plan.groupBy === 'month' ? 'MONTH_index' : 
-                    plan.groupBy === 'weekday' ? 'WEEKDAY_index' : null;
+    const indexKey = plan.groupBy === 'month' ? 'MONTH_index' :
+      plan.groupBy === 'weekday' ? 'WEEKDAY_index' : null;
 
     const agg: Record<string, any> = {};
     rows.forEach(r => {
@@ -223,9 +281,9 @@ export class CalculationModule {
       let othersProfit = 0;
       Object.entries(stats).forEach(([cat, data]) => {
         if (!top7.find(t => t.label === cat)) {
-            data.txIds.forEach(id => othersTxIds.add(id));
-            othersRev += data.rev;
-            othersProfit += data.profit;
+          data.txIds.forEach(id => othersTxIds.add(id));
+          othersRev += data.rev;
+          othersProfit += data.profit;
         }
       });
       return [...top7, {
@@ -298,5 +356,66 @@ export class CalculationModule {
     const total = sorted.reduce((s, x) => s + x.value, 0);
     let run = 0;
     return sorted.map(x => { run += x.value; return { ...x, cumulativePercent: total ? (run / total) * 100 : 0 }; });
+  }
+
+  static getTopProducts(rows: DataRow[], limit = 10) {
+    const products: Record<string, { revenue: number, profit: number }> = {};
+    rows.forEach(r => {
+      const pid = r['PRODUCT_ID_final'];
+      if (!products[pid]) products[pid] = { revenue: 0, profit: 0 };
+      products[pid].revenue += r['REVENUE_final'];
+      products[pid].profit += r['PROFIT_final'];
+    });
+    return Object.entries(products)
+      .map(([label, stats]) => ({ label, value: stats.revenue, profit: stats.profit }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, limit);
+  }
+
+  static getProfitMarginTrend(rows: DataRow[]) {
+    const monthlyStats: Record<string, { revenue: number, profit: number, monthIdx: number }> = {};
+
+    rows.forEach(r => {
+      if (!r['MONTH_index']) return;
+      const key = r['MONTH_final'];
+      if (!monthlyStats[key]) monthlyStats[key] = { revenue: 0, profit: 0, monthIdx: r['MONTH_index'] };
+      monthlyStats[key].revenue += r['REVENUE_final'];
+      monthlyStats[key].profit += r['PROFIT_final'];
+    });
+
+    return Object.values(monthlyStats)
+      .sort((a, b) => a.monthIdx - b.monthIdx)
+      .map(stats => ({
+        label: MONTH_ORDER[stats.monthIdx - 1]?.slice(0, 3) || 'UNK',
+        margin: stats.revenue ? (stats.profit / stats.revenue) * 100 : 0
+      }));
+  }
+
+  static getCumulativeRevenue(rows: DataRow[]) {
+    const daily: Record<string, { date: number, revenue: number }> = {};
+    let hasDates = false;
+
+    rows.forEach(r => {
+      if (r['YEAR_final'] && r['MONTH_index']) {
+        hasDates = true;
+        // Create a sortable key YYYYMM
+        const key = r['YEAR_final'] * 100 + r['MONTH_index'];
+        if (!daily[key]) daily[key] = { date: key, revenue: 0 };
+        daily[key].revenue += r['REVENUE_final'];
+      }
+    });
+
+    if (!hasDates) return [];
+
+    const sorted = Object.values(daily).sort((a, b) => a.date - b.date);
+    let runningTotal = 0;
+
+    return sorted.map(d => {
+      runningTotal += d.revenue;
+      const year = Math.floor(d.date / 100);
+      const month = d.date % 100;
+      const label = `${MONTH_ORDER[month - 1]?.slice(0, 3)} ${year}`;
+      return { label, value: runningTotal };
+    });
   }
 }

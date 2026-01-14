@@ -14,8 +14,8 @@ import { StorageService } from './services/storage';
 import { SAMPLE_DATASET } from './constants';
 import { driver } from "driver.js";
 import TermsGate, { DEFAULT_TERMS_STORAGE_KEY, DEFAULT_TERMS_VERSION } from "./components/TermsGate";
-import { 
-  Upload, FileText, Clock, Trash2, ArrowRight, AlertCircle, 
+import {
+  Upload, FileText, Clock, Trash2, ArrowRight, AlertCircle,
   LayoutDashboard, TrendingUp, MessageSquare, Home, Calendar, History,
   PlayCircle, BarChart3, Shield
 } from 'lucide-react';
@@ -68,11 +68,7 @@ const App: React.FC = () => {
     setTermsAccepted(readStoredTermsAcceptance());
   }, []);
 
-  useEffect(() => {
-    if (!termsAccepted) {
-      setTermsModalActive(true);
-    }
-  }, [termsAccepted]);
+
 
   const ensureTerms = (next: () => void) => {
     if (termsAccepted) {
@@ -99,72 +95,72 @@ const App: React.FC = () => {
       prevBtnText: 'Geri',
       doneBtnText: 'Bitir',
       steps: [
-        { 
-          element: '[data-tour="hero-landing"]', 
-          popover: { 
-            title: 'InsightStream BI', 
-            description: 'Bu uygulama ile verilerinizi yükleyebilir, interaktif dashboardlar oluşturabilir ve AI destekli analizler yapabilirsiniz.', 
-            side: "right", 
-            align: 'start' 
-          } 
+        {
+          element: '[data-tour="hero-landing"]',
+          popover: {
+            title: 'InsightStream BI',
+            description: 'Bu uygulama ile verilerinizi yükleyebilir, interaktif dashboardlar oluşturabilir ve AI destekli analizler yapabilirsiniz.',
+            side: "right",
+            align: 'start'
+          }
         },
-        { 
-          element: '[data-tour="upload"]', 
-          popover: { 
-            title: 'Veri Yükleme', 
-            description: 'Başlamak için kendi verinizi yükleyin veya örnek veri setini kullanın. (Sizin için şimdi örnek veriyi yüklüyoruz!)', 
-            side: "bottom", 
+        {
+          element: '[data-tour="upload"]',
+          popover: {
+            title: 'Veri Yükleme',
+            description: 'Başlamak için kendi verinizi yükleyin veya örnek veri setini kullanın. (Sizin için şimdi örnek veriyi yüklüyoruz!)',
+            side: "bottom",
             align: 'start',
             onNextClick: () => {
               if (!activeDataset) loadDemo();
             }
           }
         },
-        { 
-          element: '[data-tour="filters"]', 
-          popover: { title: 'Dinamik Filtreler', description: 'Yıl, Ay, Şube ve Kategori bazlı anlık filtreleme yapın. Tüm grafikler anında güncellenir.', side: "right", align: 'start' } 
+        {
+          element: '[data-tour="filters"]',
+          popover: { title: 'Dinamik Filtreler', description: 'Yıl, Ay, Şube ve Kategori bazlı anlık filtreleme yapın. Tüm grafikler anında güncellenir.', side: "right", align: 'start' }
         },
-        { 
-          element: '[data-tour="kpis"]', 
-          popover: { title: 'Canlı Metrikler', description: 'Ciro, Kâr ve Satış miktarlarınızı gerçek zamanlı takip edin.', side: "bottom", align: 'start' } 
+        {
+          element: '[data-tour="kpis"]',
+          popover: { title: 'Canlı Metrikler', description: 'Ciro, Kâr ve Satış miktarlarınızı gerçek zamanlı takip edin.', side: "bottom", align: 'start' }
         },
-        { 
-          element: '[data-tour="charts"]', 
-          popover: { title: 'Gelişmiş Grafikler', description: 'Trendler, Pareto ve Fiyat analizlerini buradan inceleyin.', side: "top", align: 'start' } 
+        {
+          element: '[data-tour="charts"]',
+          popover: { title: 'Gelişmiş Grafikler', description: 'Trendler, Pareto ve Fiyat analizlerini buradan inceleyin.', side: "top", align: 'start' }
         },
-        { 
-          element: '[data-tour="nav-chat"]', 
-          popover: { 
-            title: 'Veri ile Sohbet', 
-            description: 'Yapay zekaya doğal dilde sorular sorarak analiz isteyin. Örn: "En kârlı şube hangisi?"', 
-            side: "bottom", 
+        {
+          element: '[data-tour="nav-chat"]',
+          popover: {
+            title: 'Veri ile Sohbet',
+            description: 'Yapay zekaya doğal dilde sorular sorarak analiz isteyin. Örn: "En kârlı şube hangisi?"',
+            side: "bottom",
             align: 'start',
             onNextClick: () => setCurrentPage(Page.Chat)
           }
         },
-        { 
-          element: '[data-tour="nav-sim"]', 
-          popover: { 
-            title: 'What-if Simülasyon', 
-            description: 'Fiyat ve marj değişimlerinin kâr üzerindeki etkilerini simüle edin.', 
-            side: "bottom", 
+        {
+          element: '[data-tour="nav-sim"]',
+          popover: {
+            title: 'What-if Simülasyon',
+            description: 'Fiyat ve marj değişimlerinin kâr üzerindeki etkilerini simüle edin.',
+            side: "bottom",
             align: 'start',
             onNextClick: () => setCurrentPage(Page.Simulation)
           }
         },
-        { 
-          element: '[data-tour="nav-sch"]', 
-          popover: { 
-            title: 'Otomatik Raporlama', 
-            description: 'Dashboard görünümlerinizi PDF olarak zamanlayıp otomatik e-posta gönderin.', 
-            side: "bottom", 
+        {
+          element: '[data-tour="nav-sch"]',
+          popover: {
+            title: 'Otomatik Raporlama',
+            description: 'Dashboard görünümlerinizi PDF olarak zamanlayıp otomatik e-posta gönderin.',
+            side: "bottom",
             align: 'start',
             onNextClick: () => setCurrentPage(Page.Scheduling)
           }
         }
       ]
     });
-    
+
     // Eğer Landing'de değilsek, turu oradan başlatmak için yönlendir
     if (currentPage !== Page.Landing) {
       setCurrentPage(Page.Landing);
@@ -242,7 +238,7 @@ const App: React.FC = () => {
   const Navigation = () => (
     <nav className="relative z-[120] bg-gradient-to-r from-indigo-800 via-purple-700 to-sky-500 text-white px-8 py-4 flex items-center justify-between no-print sticky top-0 shadow-[0_10px_40px_rgba(15,23,42,0.45)] border-b border-white/20">
       <div className="flex items-center gap-6">
-        <div 
+        <div
           onClick={() => setCurrentPage(Page.Landing)}
           className="flex items-center gap-3 cursor-pointer group"
         >
@@ -253,52 +249,52 @@ const App: React.FC = () => {
           </div>
         </div>
         <div className="flex gap-1 bg-white/10 backdrop-blur px-1.5 py-1 rounded-2xl overflow-x-auto border border-white/20 shadow-inner shadow-black/20">
-          <button 
+          <button
             onClick={() => setCurrentPage(Page.Landing)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.4em] transition-all ${currentPage === Page.Landing ? 'bg-white text-indigo-700 shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
           >
             <Home className="w-3 h-3" /> Ana Sayfa
           </button>
-          <button 
+          <button
             onClick={() => setCurrentPage(Page.Dashboard)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.4em] transition-all ${currentPage === Page.Dashboard ? 'bg-white text-indigo-700 shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
           >
             <LayoutDashboard className="w-3 h-3" /> Dashboard
           </button>
-          <button 
+          <button
             onClick={() => setCurrentPage(Page.DataQuality)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.4em] transition-all ${currentPage === Page.DataQuality ? 'bg-white text-indigo-700 shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
           >
             <Shield className="w-3 h-3" /> Veri Kalitesi
           </button>
-          <button 
+          <button
             onClick={() => setCurrentPage(Page.AnnualSummary)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.4em] transition-all ${currentPage === Page.AnnualSummary ? 'bg-white text-indigo-700 shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
           >
-            <BarChart3 className="w-3 h-3" /> Yıllık Özet
+            <BarChart3 className="w-3 h-3" /> Performans Özeti
           </button>
-          <button 
+          <button
             data-tour="nav-sim"
             onClick={() => setCurrentPage(Page.Simulation)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.4em] transition-all ${currentPage === Page.Simulation ? 'bg-white text-indigo-700 shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
           >
             <TrendingUp className="w-3 h-3" /> Simülasyon
           </button>
-          <button 
+          <button
             data-tour="nav-chat"
             onClick={() => setCurrentPage(Page.Chat)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.4em] transition-all ${currentPage === Page.Chat ? 'bg-white text-indigo-700 shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
           >
             <MessageSquare className="w-3 h-3" /> Sohbet
           </button>
-          <button 
+          <button
             data-tour="nav-sch"
             onClick={() => setCurrentPage(Page.Scheduling)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.4em] transition-all ${currentPage === Page.Scheduling ? 'bg-white text-indigo-700 shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
           >
             <Calendar className="w-3 h-3" /> Zamanlama
           </button>
-          <button 
+          <button
             onClick={() => setCurrentPage(Page.History)}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.4em] transition-all ${currentPage === Page.History ? 'bg-white text-indigo-700 shadow-lg' : 'text-white/70 hover:text-white hover:bg-white/10'}`}
           >
@@ -306,7 +302,7 @@ const App: React.FC = () => {
           </button>
         </div>
       </div>
-          <button onClick={goToHome} className="p-3 rounded-2xl border border-white/30 bg-white/15 text-white hover:bg-white/25 transition-colors shadow-inner shadow-black/20" title="Dosya Yükleme">
+      <button onClick={goToHome} className="p-3 rounded-2xl border border-white/30 bg-white/15 text-white hover:bg-white/25 transition-colors shadow-inner shadow-black/20" title="Dosya Yükleme">
         <Upload className="w-5 h-5" />
       </button>
     </nav>
@@ -315,8 +311,8 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (!activeDataset) return null;
     switch (currentPage) {
-        case Page.Dashboard:
-          return <Dashboard dataset={activeDataset} onBack={goToHome} onStartTour={handleStartTour} />;
+      case Page.Dashboard:
+        return <Dashboard dataset={activeDataset} onBack={goToHome} onStartTour={handleStartTour} />;
       case Page.DataQuality:
         return <DataQualityPage dataset={activeDataset} />;
       case Page.Simulation:
@@ -385,9 +381,9 @@ const App: React.FC = () => {
               </label>
               {error && <div className="mt-4 p-4 bg-rose-50 rounded-xl border border-rose-100 text-sm font-bold text-rose-600 flex gap-2"><AlertCircle className="w-5 h-5" /> {error}</div>}
             </div>
-            
+
             <div className="flex items-center gap-4"><div className="h-px flex-1 bg-slate-100"></div><span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">VEYA</span><div className="h-px flex-1 bg-slate-100"></div></div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button onClick={loadDemo} className="flex items-center gap-4 p-4 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-2xl transition-all group">
                 <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-600 group-hover:text-indigo-600 transition-colors"><FileText className="w-5 h-5" /></div>
@@ -417,7 +413,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          <button 
+          <button
             onClick={() => setCurrentPage(Page.Landing)}
             className="mx-auto flex items-center gap-2 text-slate-400 hover:text-slate-600 font-bold text-sm transition-colors"
           >

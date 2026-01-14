@@ -42,30 +42,43 @@ export class DataProcessor {
     const map: SchemaMapping = {
       txId: null, date: null, year: null, month: null, weekday: null,
       city: null, branch: null, category: null, price: null, qty: null,
-      margin: null, revenue: null, profit: null, cost: null
+      margin: null, revenue: null, profit: null, cost: null, discount: null
     };
 
     const find = (keywords: string[], type?: ColumnType) => {
-      return profiles.find(p => 
-        keywords.some(k => p.name.toLowerCase().includes(k)) && 
+      // Prioritize exact matches first, then partial matches
+      const exact = profiles.find(p =>
+        keywords.some(k => p.name.toLowerCase() === k.toLowerCase()) &&
+        (!type || p.type === type)
+      );
+      if (exact) return exact.name;
+
+      return profiles.find(p =>
+        keywords.some(k => p.name.toLowerCase().includes(k.toLowerCase())) &&
         (!type || p.type === type)
       )?.name || null;
     };
 
-    map.txId = find(['id', 'transaction', 'order', 'işlem', 'islem', 'fiş', 'fis', 'invoice']);
-    map.date = find(['date', 'tarih', 'zaman', 'time', 'created'], 'date');
-    map.year = find(['year', 'yıl', 'yil']);
+    map.txId = find(['id', 'tx', 'transaction', 'order', 'işlem', 'islem', 'fiş', 'fis', 'invoice', 'sipariş', 'siparis', 'ref', 'reference']);
+    map.date = find(['date', 'tarih', 'zaman', 'time', 'created', 'oluşturma', 'dönem', 'period'], 'date');
+    if (!map.date) map.date = find(['date', 'tarih', 'zaman'], 'string'); // Fallback for unparsed dates
+
+    map.year = find(['year', 'yıl', 'yil', 'sene']);
     map.month = find(['month', 'ay']);
-    map.weekday = find(['weekday', 'gün', 'gun']);
-    map.city = find(['city', 'şehir', 'sehir', 'il', 'region', 'bölge']);
-    map.branch = find(['branch', 'şube', 'sube', 'mağaza', 'magaza', 'store', 'district']);
-    map.category = find(['category', 'kategori', 'tip', 'type', 'segment', 'grup']);
-    map.price = find(['price', 'fiyat', 'birim', 'rate', 'unitprice'], 'numeric');
-    map.qty = find(['qty', 'quantity', 'adet', 'miktar', 'units', 'count'], 'numeric');
-    map.margin = find(['margin', 'marj', 'oran', 'rate', 'kar%', 'kâr%'], 'numeric');
-    map.revenue = find(['revenue', 'sales', 'ciro', 'tutar', 'amount', 'gelir', 'toplam'], 'numeric');
-    map.profit = find(['profit', 'kar', 'kâr', 'kazanç', 'net'], 'numeric');
-    map.cost = find(['cost', 'maliyet', 'gider'], 'numeric');
+    map.weekday = find(['weekday', 'gün', 'gun', 'day']);
+
+    map.city = find(['city', 'şehir', 'sehir', 'il', 'region', 'bölge', 'bolge', 'location', 'lokasyon', 'kent', 'province']);
+    map.branch = find(['branch', 'şube', 'sube', 'mağaza', 'magaza', 'store', 'district', 'bayi', 'ofis', 'nokta']);
+    map.category = find(['category', 'kategori', 'tip', 'type', 'segment', 'grup', 'group', 'class', 'sınıf', 'tür', 'tur', 'family', 'aile']);
+
+    // Financials
+    map.price = find(['price', 'fiyat', 'birim', 'rate', 'unitprice', 'satış fiyatı', 'satis fiyati', 'birim fiyat'], 'numeric');
+    map.qty = find(['qty', 'quantity', 'adet', 'miktar', 'units', 'count', 'sayı', 'sayi', 'volume', 'hacim'], 'numeric');
+    map.margin = find(['margin', 'marj', 'oran', 'rate', 'kar%', 'kâr%', 'profitability', 'karlılık'], 'numeric');
+    map.revenue = find(['revenue', 'sales', 'ciro', 'tutar', 'amount', 'gelir', 'toplam', 'total', 'bedel', 'satış', 'satis'], 'numeric');
+    map.profit = find(['profit', 'kar', 'kâr', 'kazanç', 'net', 'earnings', 'fayda'], 'numeric');
+    map.cost = find(['cost', 'maliyet', 'gider', 'expense', 'harcama', 'alış', 'alis'], 'numeric');
+    map.discount = find(['discount', 'indirim', 'iskonto', 'kampanya', 'rebate'], 'numeric');
 
     return map;
   }
@@ -73,9 +86,13 @@ export class DataProcessor {
   static processDataset(name: string, rawRows: DataRow[]): Dataset {
     const profiles = this.profileDataset(rawRows);
     const mapping = this.autoMap(profiles);
-    
-    // Mode Detection: Urban Sales requires key fields
-    const isUrban = !!(mapping.date && mapping.category && (mapping.revenue || (mapping.price && mapping.qty)));
+
+    // Mode Detection: Urban Sales requires key fields OR enough info to calculate them
+    // Relaxed Rule: effectively always URBAN_SALES if we have at least one dimension and one metric
+    const hasDimensions = !!(mapping.date || mapping.category || mapping.city || mapping.branch);
+    const hasMetrics = !!(mapping.revenue || (mapping.price && mapping.qty));
+
+    const isUrban = hasDimensions && hasMetrics;
 
     return {
       name,

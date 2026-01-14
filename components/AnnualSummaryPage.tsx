@@ -5,8 +5,8 @@ import { CalculationModule } from '../services/calculationModule';
 import { getStrategicAnnualSummary } from '../services/gemini';
 import { EmailService } from '../services/emailService';
 import { MONTH_ORDER } from '../constants';
-import { 
-  Zap, Loader2, FileText, TrendingUp, TrendingDown, 
+import {
+  Zap, Loader2, FileText, TrendingUp, TrendingDown,
   Target, AlertTriangle, Lightbulb, CheckCircle2, FileDown,
   Calendar, Award, BarChart3, MapPin, Table as TableIcon,
   Mail, Send, X
@@ -142,10 +142,10 @@ export const AnnualSummaryPage: React.FC<Props> = ({ dataset }) => {
     const filtered = processedRows.filter(r => r._year === selectedYear);
     const kpis = CalculationModule.getTotalKPIs(filtered);
     const margin = kpis.revenue > 0 ? (kpis.profit / kpis.revenue) * 100 : 0;
-    
+
     const categoryData = CalculationModule.getGroupedData(filtered, '_category', '_revenue', 'SUM', 5);
     const cityData = CalculationModule.getGroupedData(filtered, '_city', '_revenue', 'SUM', 5);
-    
+
     // 12-Month Table Data
     const monthlyRows = MONTH_ORDER.map((month, idx) => {
       const monthNum = idx + 1;
@@ -200,7 +200,7 @@ ${dataset.name} • InsightStream BI`);
   const getReportElement = () => (typeof window === 'undefined' ? null : document.getElementById('annual-report-print-root'));
 
   const injectPdfStyles = () => {
-    if (typeof window === 'undefined') return () => {};
+    if (typeof window === 'undefined') return () => { };
     const style = document.createElement('style');
     style.id = 'annual-pdf-temp-styles';
     style.innerHTML = `
@@ -418,15 +418,15 @@ ${dataset.name} • InsightStream BI`);
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-8 no-print">
         <div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase flex items-center gap-3">
-            <Zap className="w-8 h-8 text-indigo-600" /> Yıllık Performans Özeti
+            <Zap className="w-8 h-8 text-indigo-600" /> Performans Özeti
           </h2>
           <p className="text-slate-500 text-sm font-medium">Seçili yılın finansal ve operasyonel analizi.</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap justify-end">
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-1.5 shadow-sm">
             <Calendar className="w-4 h-4 text-slate-400" />
-            <select 
-              value={selectedYear} 
+            <select
+              value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
               className="bg-transparent text-sm font-black uppercase outline-none cursor-pointer"
             >
@@ -439,7 +439,7 @@ ${dataset.name} • InsightStream BI`);
           >
             <Mail className="w-4 h-4" /> E-Posta Gönder
           </button>
-          <button 
+          <button
             onClick={handleExportPDF}
             disabled={isExporting || loading}
             className="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 shadow-xl transition-all active:scale-95 disabled:opacity-50"
@@ -685,7 +685,7 @@ ${dataset.name} • InsightStream BI`);
             <p className="text-sm text-slate-200 font-semibold">AI aksiyon planı üretilemedi.</p>
           )}
         </section>
-        
+
         {/* PDF Footer Only */}
         <div className="hidden print:block pt-12 border-t border-slate-100 text-center">
           <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">InsightStream Strategic Engine • {new Date().toLocaleDateString('tr-TR')}</p>
