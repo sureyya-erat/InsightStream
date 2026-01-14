@@ -321,7 +321,25 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
   const topProducts = useMemo(() => CalculationModule.getTopProducts(filteredRows), [filteredRows]);
   const marginTrend = useMemo(() => CalculationModule.getProfitMarginTrend(filteredRows), [filteredRows]);
   const cumulativeGrowth = useMemo(() => CalculationModule.getCumulativeRevenue(filteredRows), [filteredRows]);
-  const orderSizeDist = useMemo(() => CalculationModule.getGroupedData(filteredRows, 'QTY_SOLD_final', 'TX_ID_final', 'COUNT'), [filteredRows]); // Simplified histogram proxy
+
+  // REPLACEMENT: Instead of Order Size Dist, we calculate Top Profitable Products
+  const topConf = useMemo(() => {
+    const buckets: Record<string, { revenue: number; profit: number }> = {};
+    filteredRows.forEach(row => {
+      const label = row['PRODUCT_final'] || 'Diğer';
+      if (!buckets[label]) buckets[label] = { revenue: 0, profit: 0 };
+      buckets[label].revenue += (row._revenue ?? row['REVENUE_final'] ?? 0);
+      buckets[label].profit += (row._profit ?? row['PROFIT_final'] ?? 0);
+    });
+    return Object.entries(buckets)
+      .map(([label, val]) => ({
+        label: label.length > 25 ? label.slice(0, 25) + '...' : label,
+        value: val.profit,
+        revenue: val.revenue
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 7);
+  }, [filteredRows]);
 
   const forecastData = useMemo(() => CalculationModule.getForecastData(filteredRows), [filteredRows]);
 
@@ -498,20 +516,21 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
       });
     }
 
-    if (orderSizeDist.length) {
+    if (topProducts.length) {
       defs.push({
-        id: 'order-dist',
-        title: 'Sipariş Miktarı Dağılımı',
-        description: 'Hangi miktarlarda satış yapılıyor?',
+        id: 'top-products-profit',
+        title: 'En Kârlı Ürünler (Top 7)',
+        description: 'Hangi ürünler en çok net kâr bırakıyor?',
         type: 'bar',
-        data: orderSizeDist,
+        data: topProducts,
         dataKey: 'value',
         height: 320,
+        span: 1
       });
     }
 
     return defs;
-  }, [monthlyPerformance, weekdayRhythm, categoryMargin, cityPerformance, basketTrend, paretoData, bubbleMatrix, topProducts, marginTrend, cumulativeGrowth, orderSizeDist]);
+  }, [monthlyPerformance, weekdayRhythm, categoryMargin, cityPerformance, basketTrend, paretoData, bubbleMatrix, topProducts, marginTrend, cumulativeGrowth, topConf]);
 
   const chartLibrary = useMemo(() => {
     return chartDefinitions.reduce<Record<string, ChartDefinition>>((acc, def) => {
@@ -682,16 +701,30 @@ export const Dashboard: React.FC<Props> = ({ dataset, onBack, onStartTour }) => 
         <main className="p-8 space-y-12">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {[
-              { label: 'Ciro', value: `₺${kpis.revenue.toLocaleString()} `, color: 'text-indigo-600', icon: '💰', bg: 'bg-indigo-50' },
-              { label: 'Kâr', value: `₺${kpis.profit.toLocaleString()} `, color: 'text-emerald-600', icon: '📈', bg: 'bg-emerald-50' },
+              { label: 'Ciro', value: `₺${kpis.revenue.toLocaleString()}`, color: 'text-indigo-600', icon: '💰', bg: 'bg-indigo-50' },
+              { label: 'Kâr', value: `₺${kpis.profit.toLocaleString()}`, color: 'text-emerald-600', icon: '📈', bg: 'bg-emerald-50' },
               { label: 'Satılan Birim', value: kpis.units.toLocaleString(), color: 'text-orange-600', icon: '📦', bg: 'bg-orange-50' },
               { label: 'İşlem', value: kpis.txns.toLocaleString(), color: 'text-slate-600', icon: '🧾', bg: 'bg-slate-50' }
-            ].map(k => (
-              <div key={k.label} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all hover:shadow-lg">
-                <div><p className="text-xs font-bold text-slate-400 uppercase mb-2 tracking-wider">{k.label}</p><h4 className={`text-4xl font-black ${k.color}`}>{k.value}</h4></div>
-                <div className={`${k.bg} w-16 h-16 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform no-print`}>{k.icon}</div>
-              </div>
-            ))}
+            ].map((k) => {
+              // Aggressive font sizing logic
+              const len = k.value.length;
+              let sizeClass = 'text-4xl';
+              if (len > 14) sizeClass = 'text-lg'; // e.g. 100,000,000.00
+              else if (len > 11) sizeClass = 'text-xl'; // e.g. 12,345,678
+              else if (len > 8) sizeClass = 'text-2xl'; // e.g. 1,234,567
+
+              return (
+                <div key={k.label} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex justify-between items-center group transition-all hover:shadow-lg overflow-hidden">
+                  <div className="flex-1 min-w-0 pr-2">
+                    <p className="text-xs font-bold text-slate-400 uppercase mb-1 tracking-wider">{k.label}</p>
+                    <h4 className={`font-black ${k.color} tracking-tight truncate ${sizeClass}`} title={k.value}>
+                      {k.value}
+                    </h4>
+                  </div>
+                  <div className={`${k.bg} w-14 h-14 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform no-print shrink-0`}>{k.icon}</div>
+                </div>
+              )
+            })}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

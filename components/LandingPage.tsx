@@ -119,13 +119,13 @@ export const LandingPage: React.FC<Props> = ({ onStart, onDemo, onTour }) => {
           </div>
           <div className="space-y-6">
             <h1 className="text-5xl lg:text-8xl font-black text-slate-900 leading-[0.95] tracking-tighter">
-              Verini Yükle, <br />
+              Satış Verini Yükle, <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600">
-                Geleceği Gör.
+                Cironu Katla.
               </span>
             </h1>
             <p className="text-xl text-slate-500 max-w-2xl leading-relaxed font-medium">
-              Excel, CSV veya JSON dosyalarınızı saniyeler içinde profesyonel BI dashboard'larına dönüştürün. Gemini AI içgörüleri ve akıllı simülasyonlar ile verinizi konuşturun.
+              Excel satış raporlarınızı saniyeler içinde analiz edin. Mağaza performansını ölçün, kârlı ürünleri keşfedin ve stok maliyetlerini optimize edin.
             </p>
           </div>
 
@@ -168,9 +168,9 @@ export const LandingPage: React.FC<Props> = ({ onStart, onDemo, onTour }) => {
       {/* Quick Highlights */}
       <div className="max-w-7xl mx-auto px-8 grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
         {[
-          { icon: <Activity className="w-5 h-5" />, title: "Otomatik Dashboard", desc: "10+ Dinamik grafik ve KPI kartı saniyeler içinde hazır." },
-          { icon: <MessageSquare className="w-5 h-5" />, title: "Veri ile Sohbet", desc: "Sorular sorun, Gemini AI cevapları ve mini grafikleri üretsin." },
-          { icon: <TrendingUp className="w-5 h-5" />, title: "What-if Analizi", desc: "Fiyat ve marj değişimlerinin ciro/kâr etkisini simüle edin." }
+          { icon: <Activity className="w-5 h-5" />, title: "Satış Performansı", desc: "Şube, Kategori ve Personel bazlı ciro analizleri anında hazır." },
+          { icon: <MessageSquare className="w-5 h-5" />, title: "Veri ile Sohbet", desc: "'Hangi ürün daha kârlı?' gibi sorular sorun, Gemini size anlatsın." },
+          { icon: <TrendingUp className="w-5 h-5" />, title: "Kâr Simülasyonu", desc: "Fiyat artışı veya stok maliyeti değişiminin kârlılığa etkisini görün." }
         ].map((h, i) => (
           <div key={i} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
             <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-6">{h.icon}</div>
@@ -190,12 +190,12 @@ export const LandingPage: React.FC<Props> = ({ onStart, onDemo, onTour }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16">
             {[
-              { icon: <Upload className="w-6 h-6" />, title: "Akıllı Veri Ayrıştırma", desc: "Sütunları, tarih formatlarını ve sayısal değerleri otomatik tespit eder ve normalize eder." },
-              { icon: <Sparkles className="w-6 h-6" />, title: "AI Narratives", desc: "Grafiklerin ötesinde, verilerinizin ne anlattığını Gemini AI ile doğal dilde okuyun." },
-              { icon: <PieChart className="w-6 h-6" />, title: "Gelişmiş Görselleştirme", desc: "Pareto analizinden, tahminleme çizgilerine kadar profesyonel BI grafiklerini kullanın." },
-              { icon: <FileText className="w-6 h-6" />, title: "PDF Raporlama", desc: "Analizlerinizi tek tıkla profesyonel PDF'lere dönüştürün veya yazdırın." },
-              { icon: <Calendar className="w-6 h-6" />, title: "Otomatik Gönderim", desc: "Raporlarınızı belirli aralıklarla e-posta olarak gönderilecek şekilde zamanlayın." },
-              { icon: <ShieldCheck className="w-6 h-6" />, title: "Gizlilik Öncelikli", desc: "Verileriniz asla buluta kaydedilmez, her şey tarayıcınızın içinde güvenle işlenir." }
+              { icon: <Upload className="w-6 h-6" />, title: "Excel Uyumluluğu", desc: "Standart e-ticaret ve perakende satış raporlarını otomatik tanır ve işler." },
+              { icon: <Sparkles className="w-6 h-6" />, title: "AI Satış Danışmanı", desc: "Düşük performans gösteren şubeleri ve fırsat ürünlerini otomatik tespit eder." },
+              { icon: <PieChart className="w-6 h-6" />, title: "Pareto Analizi", desc: "Cironuzun %80'ini oluşturan %20'lik ürün grubunu hemen keşfedin." },
+              { icon: <FileText className="w-6 h-6" />, title: "Yönetici Raporu", desc: "Haftalık satış özetinizi tek tıkla PDF olarak paylaşın." },
+              { icon: <Calendar className="w-6 h-6" />, title: "Hedef Takibi", desc: "Günlük, haftalık ve aylık satış hedeflerinizi verilerle karşılaştırın." },
+              { icon: <ShieldCheck className="w-6 h-6" />, title: "Veri Gizliliği", desc: "Hassas finansal verileriniz tarayıcınızdan dışarı çıkmaz." }
             ].map((f, i) => (
               <div key={i} className="flex gap-6 group">
                 <div className="w-14 h-14 bg-slate-50 group-hover:bg-indigo-600 group-hover:text-white rounded-2xl flex items-center justify-center text-indigo-600 transition-all shrink-0 shadow-sm border border-slate-100 group-hover:border-indigo-600">

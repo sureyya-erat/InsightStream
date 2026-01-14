@@ -89,76 +89,103 @@ const App: React.FC = () => {
   };
 
   const launchGuidedTour = () => {
-    const driverObj = driver({
+    let driverObj: any;
+
+    const tourSteps = [
+      {
+        element: '[data-tour="hero-landing"]',
+        popover: {
+          title: 'InsightStream BI',
+          description: 'Bu uygulama ile verilerinizi yükleyebilir, interaktif dashboardlar oluşturabilir ve AI destekli analizler yapabilirsiniz.',
+          side: "right",
+          align: 'start'
+        }
+      },
+      {
+        element: '[data-tour="upload"]',
+        popover: {
+          title: 'Veri Yükleme',
+          description: 'Başlamak için kendi verinizi yükleyin veya örnek veri setini kullanın. (Sizin için şimdi örnek veriyi yüklüyoruz!)',
+          side: "bottom",
+          align: 'start',
+          onNextClick: () => {
+            if (!activeDataset) {
+              loadDemo();
+              // Wait for React to render Dashboard then move next
+              setTimeout(() => {
+                driverObj.moveNext();
+              }, 800);
+            } else {
+              driverObj.moveNext();
+            }
+          }
+        }
+      },
+      {
+        element: '[data-tour="filters"]',
+        popover: { title: 'Dinamik Filtreler', description: 'Yıl, Ay, Şube ve Kategori bazlı anlık filtreleme yapın. Tüm grafikler anında güncellenir.', side: "right", align: 'start' }
+      },
+      {
+        element: '[data-tour="kpis"]',
+        popover: { title: 'Canlı Metrikler', description: 'Ciro, Kâr ve Satış miktarlarınızı gerçek zamanlı takip edin.', side: "bottom", align: 'start' }
+      },
+      {
+        element: '[data-tour="charts"]',
+        popover: { title: 'Gelişmiş Grafikler', description: 'Trendler, Pareto ve Fiyat analizlerini buradan inceleyin.', side: "top", align: 'start' }
+      },
+      {
+        element: '[data-tour="nav-chat"]',
+        popover: {
+          title: 'Veri ile Sohbet',
+          description: 'Yapay zekaya doğal dilde sorular sorarak analiz isteyin. Örn: "En kârlı şube hangisi?"',
+          side: "bottom",
+          align: 'start',
+          onNextClick: () => {
+            setCurrentPage(Page.Chat);
+            setTimeout(() => {
+              driverObj.moveNext();
+            }, 500);
+          }
+        }
+      },
+      {
+        element: '[data-tour="nav-sim"]',
+        popover: {
+          title: 'What-if Simülasyon',
+          description: 'Fiyat ve marj değişimlerinin kâr üzerindeki etkilerini simüle edin.',
+          side: "bottom",
+          align: 'start',
+          onNextClick: () => {
+            setCurrentPage(Page.Simulation);
+            setTimeout(() => {
+              driverObj.moveNext();
+            }, 500);
+          }
+        }
+      },
+      {
+        element: '[data-tour="nav-sch"]',
+        popover: {
+          title: 'Otomatik Raporlama',
+          description: 'Dashboard görünümlerinizi PDF olarak zamanlayıp otomatik e-posta gönderin.',
+          side: "bottom",
+          align: 'start',
+          onNextClick: () => {
+            setCurrentPage(Page.Scheduling);
+            setTimeout(() => {
+              driverObj.moveNext();
+            }, 500);
+          }
+        }
+      }
+    ];
+
+    driverObj = driver({
       showProgress: true,
       nextBtnText: 'İleri',
       prevBtnText: 'Geri',
       doneBtnText: 'Bitir',
-      steps: [
-        {
-          element: '[data-tour="hero-landing"]',
-          popover: {
-            title: 'InsightStream BI',
-            description: 'Bu uygulama ile verilerinizi yükleyebilir, interaktif dashboardlar oluşturabilir ve AI destekli analizler yapabilirsiniz.',
-            side: "right",
-            align: 'start'
-          }
-        },
-        {
-          element: '[data-tour="upload"]',
-          popover: {
-            title: 'Veri Yükleme',
-            description: 'Başlamak için kendi verinizi yükleyin veya örnek veri setini kullanın. (Sizin için şimdi örnek veriyi yüklüyoruz!)',
-            side: "bottom",
-            align: 'start',
-            onNextClick: () => {
-              if (!activeDataset) loadDemo();
-            }
-          }
-        },
-        {
-          element: '[data-tour="filters"]',
-          popover: { title: 'Dinamik Filtreler', description: 'Yıl, Ay, Şube ve Kategori bazlı anlık filtreleme yapın. Tüm grafikler anında güncellenir.', side: "right", align: 'start' }
-        },
-        {
-          element: '[data-tour="kpis"]',
-          popover: { title: 'Canlı Metrikler', description: 'Ciro, Kâr ve Satış miktarlarınızı gerçek zamanlı takip edin.', side: "bottom", align: 'start' }
-        },
-        {
-          element: '[data-tour="charts"]',
-          popover: { title: 'Gelişmiş Grafikler', description: 'Trendler, Pareto ve Fiyat analizlerini buradan inceleyin.', side: "top", align: 'start' }
-        },
-        {
-          element: '[data-tour="nav-chat"]',
-          popover: {
-            title: 'Veri ile Sohbet',
-            description: 'Yapay zekaya doğal dilde sorular sorarak analiz isteyin. Örn: "En kârlı şube hangisi?"',
-            side: "bottom",
-            align: 'start',
-            onNextClick: () => setCurrentPage(Page.Chat)
-          }
-        },
-        {
-          element: '[data-tour="nav-sim"]',
-          popover: {
-            title: 'What-if Simülasyon',
-            description: 'Fiyat ve marj değişimlerinin kâr üzerindeki etkilerini simüle edin.',
-            side: "bottom",
-            align: 'start',
-            onNextClick: () => setCurrentPage(Page.Simulation)
-          }
-        },
-        {
-          element: '[data-tour="nav-sch"]',
-          popover: {
-            title: 'Otomatik Raporlama',
-            description: 'Dashboard görünümlerinizi PDF olarak zamanlayıp otomatik e-posta gönderin.',
-            side: "bottom",
-            align: 'start',
-            onNextClick: () => setCurrentPage(Page.Scheduling)
-          }
-        }
-      ]
+      steps: tourSteps
     });
 
     // Eğer Landing'de değilsek, turu oradan başlatmak için yönlendir

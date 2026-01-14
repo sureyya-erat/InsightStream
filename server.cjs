@@ -820,15 +820,7 @@ Rules:
 - Trend/time questions => intent: "trend", groupBy: "month".
 - Use Turkish titles for titleTR.`;
 
-      const response = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          candidateCount: 1,
-          temperature: 0.2,
-        },
-      });
-
-      const jsonStr = response.response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      const jsonStr = await generateGeminiContent(modelName, prompt);
       if (!jsonStr) throw new Error('Plan oluşturulamadı');
 
       const cleaned = jsonStr.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
