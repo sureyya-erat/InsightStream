@@ -88,6 +88,7 @@ const createSmtpTransporter = () => {
 
   const config = isGmail ? {
     service: 'Gmail',
+    family: 4, // Critical: Force IPv4 even for 'service: Gmail' due to Render IPv6 issues
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
