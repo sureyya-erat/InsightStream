@@ -4,6 +4,7 @@ const { Resend } = require('resend');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const path = require('path');
 
 dotenv.config();
 
@@ -932,6 +933,15 @@ app.post('/api/email/send', async (req, res) => {
     errorMessage: 'Aktif bir e-posta sağlayıcısı bulunamadı.',
     hintTR: 'RESEND_API_KEY veya SMTP bilgilerini .env dosyanıza ekleyip sunucuyu yeniden başlatın.',
   });
+});
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3001;
