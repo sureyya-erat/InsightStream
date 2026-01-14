@@ -84,15 +84,18 @@ const createSmtpTransporter = () => {
   if (!process.env.SMTP_HOST) return null;
   const port = parseInt(process.env.SMTP_PORT || '587');
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
     port,
     secure: process.env.SMTP_SECURE === 'true' || port === 465,
+    ignoreTLS: false,
+    requireTLS: false, // Allow upgrades
+    host: process.env.SMTP_HOST || 'smtp.gmail.com', // Explicit fallback
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
     tls: { rejectUnauthorized: false },
     connectionTimeout: 20000, // Increased to 20s for cloud environments
+    family: 4, // Force IPv4 to prevent IPv6 timeouts on Render
   });
 };
 
