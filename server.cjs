@@ -707,43 +707,50 @@ KPI özeti: ${JSON.stringify(context)}`;
     const cleaned = text.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
     return JSON.parse(cleaned);
   });
-
   return response;
 };
 
 app.get('/api/email/health', async (req, res) => {
-  const resendConfigured = !!(process.env.RESEND_API_KEY && process.env.RESEND_FROM);
-  const smtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  const smtpConfigured = !!process.env.SMTP_HOST;
+  const resendConfigured = !!process.env.RESEND_API_KEY;
 
-  let providerMode = 'none';
-  if (resendConfigured) providerMode = 'resend';
-  else if (smtpConfigured) providerMode = 'smtp';
-
-  let health = {
-    ok: providerMode !== 'none',
-    providerMode,
-    resendConfigured,
-    smtpConfigured,
-    hintTR: 'E-posta sağlayıcısı yapılandırılmamış. Lütfen .env dosyasını kontrol edin.',
-  };
-
-  if (providerMode === 'resend') {
-    health.hintTR = 'Resend (HTTP API) aktif ve hazır ✅';
-  } else if (providerMode === 'smtp') {
-    try {
-      const transporter = createSmtpTransporter();
-      if (transporter) {
-        await transporter.verify();
-        health.hintTR = 'SMTP bağlantısı doğrulandı ✅';
-      }
-    } catch (e) {
-      health.ok = false;
-      health.errorMessage = e.message;
-      health.hintTR = `SMTP Hatası (${e.code}): Bağlantı kurulamadı. Resend kullanılması önerilir.`;
-    }
+  if (!smtpConfigured && !resendConfigured) {
+    return res.json({
+      ok: false,
+      providerMode: 'none',
+      hintTR: 'E-posta servisi yapılandırılmamış.',
+      errorMessage: 'SMTP_HOST veya RESEND_API_KEY eksik.'
+    });
   }
 
-  res.json(health);
+  if (resendConfigured) {
+    return res.json({
+      ok: true,
+      providerMode: 'resend',
+      hintTR: 'Resend servisi hazır.'
+    });
+  }
+
+  // SMTP Active Check
+  const transporter = createSmtpTransporter();
+  try {
+    if (transporter) await transporter.verify();
+    res.json({
+      ok: true,
+      providerMode: 'smtp',
+      hintTR: 'SMTP bağlantısı başarılı.',
+      smtpConfigured: true
+    });
+  } catch (error) {
+    console.error('SMTP Health Check Failed:', error);
+    res.json({
+      ok: false,
+      providerMode: 'smtp',
+      hintTR: `SMTP Bağlantı Hatası: ${error.message}`,
+      errorMessage: error.message, // Return exact error (e.g. ETIMEDOUT, 535)
+      smtpConfigured: true
+    });
+  }
 });
 
 app.post('/api/ai/insights', async (req, res) => {
