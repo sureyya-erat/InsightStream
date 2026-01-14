@@ -33,21 +33,21 @@ export class EmailService {
       if (!response.ok) throw new Error('Sunucu hatası');
       return await response.json();
     } catch (e) {
-      return { 
-        ok: false, 
-        providerMode: 'none', 
-        resendConfigured: false, 
-        smtpConfigured: false, 
-        hintTR: 'Backend sunucusuna erişilemiyor veya yapılandırma hatalı.' 
+      return {
+        ok: false,
+        providerMode: 'none',
+        resendConfigured: false,
+        smtpConfigured: false,
+        hintTR: 'Backend sunucusuna erişilemiyor veya yapılandırma hatalı.'
       };
     }
   }
 
-  static async sendWithAttachment(params: { 
-    to: string, 
-    subject: string, 
-    html: string, 
-    attachments?: EmailAttachment[] 
+  static async sendWithAttachment(params: {
+    to: string,
+    subject: string,
+    html: string,
+    attachments?: EmailAttachment[]
   }): Promise<{ success: boolean; error?: string; provider?: string }> {
     try {
       const response = await fetch(this.buildUrl('/send'), {
@@ -55,17 +55,18 @@ export class EmailService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params)
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok || !data.ok) {
-        return { 
-          success: false, 
-          error: data.hintTR || data.errorMessage || data.error || 'E-posta gönderilemedi.',
-          provider: data.provider 
+        return {
+          success: false,
+          // Prioritize errorMessage (technical details) over hintTR for better debugging
+          error: data.errorMessage || data.hintTR || data.error || 'E-posta gönderilemedi.',
+          provider: data.provider
         };
       }
-      
+
       return { success: true, provider: data.provider };
     } catch (error: any) {
       return { success: false, error: 'Sunucuyla iletişim kurulamadı: ' + error.message };
@@ -74,9 +75,9 @@ export class EmailService {
 
   static async testSmtpConnection(): Promise<{ success: boolean; message: string }> {
     const health = await this.getHealth();
-    return { 
-      success: health.ok, 
-      message: health.hintTR || (health.ok ? "Bağlantı başarılı." : "Bağlantı kurulamadı.") 
+    return {
+      success: health.ok,
+      message: health.hintTR || (health.ok ? "Bağlantı başarılı." : "Bağlantı kurulamadı.")
     };
   }
 
